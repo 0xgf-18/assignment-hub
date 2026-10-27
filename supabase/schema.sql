@@ -106,7 +106,10 @@ drop policy if exists "submissions: student inserts own" on public.submissions;
 create policy "submissions: student inserts own"
   on public.submissions for insert
   to authenticated
-  with check (auth.uid() = student_id);
+  with check (
+    auth.uid() = student_id
+    and file_path like auth.uid()::text || '/%'
+  );
 
 drop policy if exists "submissions: student reads own" on public.submissions;
 create policy "submissions: student reads own"
