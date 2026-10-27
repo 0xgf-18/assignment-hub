@@ -324,6 +324,56 @@ button, input { font: inherit; color: inherit; }
 
 .auth-card { padding: 22px; box-shadow: var(--shadow-lg); }
 
+.role-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.role-tab {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8f9fd;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.role-tab:hover { border-color: #ccd3ea; background: #f4f6fb; }
+
+.role-tab.is-active {
+  background: #fff;
+  border-color: #c7cbf6;
+  box-shadow: 0 0 0 3px var(--primary-ring), var(--shadow-sm);
+}
+
+.role-icon {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #edf0f8;
+  color: var(--muted);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.role-icon svg { width: 18px; height: 18px; }
+
+.role-tab.is-active .role-icon { background: var(--primary-soft); color: var(--primary-600); }
+
+.role-copy { display: flex; flex-direction: column; gap: 1px; line-height: 1.2; min-width: 0; }
+
+.role-copy strong { font-size: 0.85rem; font-weight: 650; color: var(--ink); letter-spacing: -0.01em; }
+
+.role-copy small { font-size: 0.68rem; color: var(--muted); white-space: nowrap; }
+
 .auth-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -340,7 +390,7 @@ button, input { font: inherit; color: inherit; }
   border: 0;
   border-radius: 9px;
   background: transparent;
-  color: var(--muted);
+  color: #5c677e;
   font-weight: 600;
   font-size: 0.88rem;
   cursor: pointer;
@@ -358,6 +408,11 @@ button, input { font: inherit; color: inherit; }
 .auth-foot { margin-top: 14px; text-align: center; font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
 
 .auth-legal { text-align: center; font-size: 0.75rem; color: #98a2b8; margin-top: 20px; }
+
+@media (max-width: 380px) {
+  .role-tab { padding: 9px; gap: 7px; }
+  .role-copy small { display: none; }
+}
 
 /* ---------- App header ---------- */
 

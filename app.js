@@ -14,11 +14,18 @@
   const BUCKET = "assignments";
   const MAX_BYTES = 25 * 1024 * 1024;
 
+  // Students log in with a roll number, but Supabase Auth needs an email.
+  // We derive a private identifier from the roll number behind the scenes.
+  const STUDENT_EMAIL_DOMAIN = "students.assignment-hub.app";
+
   const state = {
     client: null,
     user: null,
     profile: null,
     mode: "login",
+    role: "student",
+    intendedRole: null,
+    authAction: null,
     file: null,
     mine: [],
     rows: [],
@@ -40,19 +47,28 @@
     authView: $("authView"),
     appView: $("appView"),
 
+    roleTabs: $("roleTabs"),
     authTabs: $("authTabs"),
     authError: $("authError"),
     authInfo: $("authInfo"),
-    loginForm: $("loginForm"),
-    loginEmail: $("loginEmail"),
-    loginPassword: $("loginPassword"),
-    loginBtn: $("loginBtn"),
-    signupForm: $("signupForm"),
-    signupName: $("signupName"),
-    signupRoll: $("signupRoll"),
-    signupEmail: $("signupEmail"),
-    signupPassword: $("signupPassword"),
-    signupBtn: $("signupBtn"),
+    studentLoginForm: $("studentLoginForm"),
+    studentLoginRoll: $("studentLoginRoll"),
+    studentLoginPassword: $("studentLoginPassword"),
+    studentLoginBtn: $("studentLoginBtn"),
+    studentSignupForm: $("studentSignupForm"),
+    studentSignupName: $("studentSignupName"),
+    studentSignupRoll: $("studentSignupRoll"),
+    studentSignupPassword: $("studentSignupPassword"),
+    studentSignupBtn: $("studentSignupBtn"),
+    teacherLoginForm: $("teacherLoginForm"),
+    teacherLoginEmail: $("teacherLoginEmail"),
+    teacherLoginPassword: $("teacherLoginPassword"),
+    teacherLoginBtn: $("teacherLoginBtn"),
+    teacherSignupForm: $("teacherSignupForm"),
+    teacherSignupName: $("teacherSignupName"),
+    teacherSignupEmail: $("teacherSignupEmail"),
+    teacherSignupPassword: $("teacherSignupPassword"),
+    teacherSignupBtn: $("teacherSignupBtn"),
 
     userAvatar: $("userAvatar"),
     userName: $("userName"),
@@ -160,6 +176,20 @@
     return (cleaned || "file").slice(-120);
   }
 
+  function studentEmail(rollNumber) {
+    const slug = String(rollNumber || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[^a-z0-9_-]/g, "")
+      .replace(/^[_-]+|[_-]+$/g, "");
+    return /[a-z0-9]/.test(slug) ? `roll.${slug}@${STUDENT_EMAIL_DOMAIN}` : "";
+  }
+
+  function validEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+  }
+
   function initials(name) {
     const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
     if (!parts.length) return "?";
@@ -174,12 +204,23 @@
     return `background:hsl(${hue} 72% 94%);color:hsl(${hue} 46% 34%);border-color:hsl(${hue} 58% 87%)`;
   }
 
-  function friendlyError(message) {
+  function friendlyError(message, role) {
     const raw = String(message || "");
     const m = raw.toLowerCase();
-    if (m.includes("invalid login")) return "Wrong email or password. Please try again.";
-    if (m.includes("email not confirmed")) return "Please confirm your email first — check your inbox for the link.";
-    if (m.includes("already registered")) return "An account with this email already exists. Try logging in.";
+    const isStudent = role === "student";
+    if (m.includes("invalid login")) {
+      return isStudent ? "Wrong roll number or password. Please try again." : "Wrong email or password. Please try again.";
+    }
+    if (m.includes("email not confirmed")) {
+      return isStudent
+        ? "This student account is not confirmed. Ask the class admin to confirm it (or turn OFF “Confirm email” in Supabase), then try again."
+        : "Please confirm your email first — check your inbox for the link.";
+    }
+    if (m.includes("already registered")) {
+      return isStudent
+        ? "That roll number already has an account. Try logging in."
+        : "An account with this email already exists. Try logging in.";
+    }
     if (m.includes("password should be")) return "Password must be at least 6 characters.";
     if (m.includes("rate limit") || m.includes("too many")) return "Too many attempts. Wait a minute and try again.";
     if (m.includes("failed to fetch") || m.includes("network")) return "Network problem. Check your connection and try again.";
@@ -217,6 +258,7 @@
 
   function showAuth() {
     setTopView(el.authView);
+    setAuthRole("student");
     setAuthMode("login");
     hideAlerts();
     finishBoot();
@@ -243,9 +285,43 @@
       btn.classList.toggle("is-active", active);
       btn.setAttribute("aria-selected", String(active));
     });
-    el.loginForm.hidden = mode !== "login";
-    el.signupForm.hidden = mode !== "signup";
+    renderAuthForms();
     hideAlerts();
+  }
+
+  function setAuthRole(role) {
+    state.role = role === "teacher" ? "teacher" : "student";
+    [...el.roleTabs.querySelectorAll(".role-tab")].forEach((btn) => {
+      const active = btn.dataset.role === state.role;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-selected", String(active));
+    });
+    renderAuthForms();
+    hideAlerts();
+  }
+
+  function renderAuthForms() {
+    const forms = [
+      el.studentLoginForm,
+      el.studentSignupForm,
+      el.teacherLoginForm,
+      el.teacherSignupForm,
+    ];
+    forms.forEach((form) => {
+      form.hidden = true;
+    });
+
+    const isTeacher = state.role === "teacher";
+    const isLogin = state.mode === "login";
+    const active = isTeacher
+      ? isLogin
+        ? el.teacherLoginForm
+        : el.teacherSignupForm
+      : isLogin
+        ? el.studentLoginForm
+        : el.studentSignupForm;
+
+    active.hidden = false;
   }
 
   function setButtonBusy(btn, busy, label) {
@@ -344,37 +420,57 @@
 
   /* ---------- Auth ---------- */
 
-  async function handleLogin(event) {
+  function beginAuth(role, action) {
+    state.intendedRole = role;
+    state.authAction = action;
+  }
+
+  function cancelAuth() {
+    state.intendedRole = null;
+    state.authAction = null;
+  }
+
+  async function handleStudentLogin(event) {
     event.preventDefault();
     hideAlerts();
 
-    const email = el.loginEmail.value.trim();
-    const password = el.loginPassword.value;
+    const rollNumber = el.studentLoginRoll.value.trim();
+    const password = el.studentLoginPassword.value;
 
-    if (!email || !password) {
-      showAlert("error", "Enter your email and password.");
+    if (!rollNumber || !password) {
+      showAlert("error", "Enter your roll number and password.");
       return;
     }
 
-    setButtonBusy(el.loginBtn, true, "Logging in…");
+    const email = studentEmail(rollNumber);
+    if (!email) {
+      showAlert("error", "Enter a valid roll number.");
+      return;
+    }
+
+    beginAuth("student", "login");
+    setButtonBusy(el.studentLoginBtn, true, "Logging in…");
     try {
       const { error } = await state.client.auth.signInWithPassword({ email, password });
-      if (error) showAlert("error", friendlyError(error.message));
+      if (error) {
+        cancelAuth();
+        showAlert("error", friendlyError(error.message, "student"));
+      }
     } catch (err) {
-      showAlert("error", friendlyError(err && err.message));
+      cancelAuth();
+      showAlert("error", friendlyError(err && err.message, "student"));
     } finally {
-      setButtonBusy(el.loginBtn, false);
+      setButtonBusy(el.studentLoginBtn, false);
     }
   }
 
-  async function handleSignup(event) {
+  async function handleStudentSignup(event) {
     event.preventDefault();
     hideAlerts();
 
-    const fullName = el.signupName.value.trim().replace(/\s+/g, " ");
-    const rollNumber = el.signupRoll.value.trim();
-    const email = el.signupEmail.value.trim();
-    const password = el.signupPassword.value;
+    const fullName = el.studentSignupName.value.trim().replace(/\s+/g, " ");
+    const rollNumber = el.studentSignupRoll.value.trim();
+    const password = el.studentSignupPassword.value;
 
     if (fullName.length < 2) {
       showAlert("error", "Enter your full name.");
@@ -384,8 +480,10 @@
       showAlert("error", "Enter your roll number.");
       return;
     }
+
+    const email = studentEmail(rollNumber);
     if (!email) {
-      showAlert("error", "Enter your email.");
+      showAlert("error", "Enter a valid roll number (letters and numbers only).");
       return;
     }
     if (password.length < 6) {
@@ -393,7 +491,8 @@
       return;
     }
 
-    setButtonBusy(el.signupBtn, true, "Creating account…");
+    beginAuth("student", "signup");
+    setButtonBusy(el.studentSignupBtn, true, "Creating account…");
     try {
       const { data, error } = await state.client.auth.signUp({
         email,
@@ -405,7 +504,8 @@
       });
 
       if (error) {
-        showAlert("error", friendlyError(error.message));
+        cancelAuth();
+        showAlert("error", friendlyError(error.message, "student"));
         return;
       }
 
@@ -413,15 +513,123 @@
         return; // onAuthStateChange routes into the app
       }
 
-      el.signupPassword.value = "";
+      cancelAuth();
+      el.studentSignupPassword.value = "";
       setAuthMode("login");
-      el.loginEmail.value = email;
-      showAlert("info", "Account created. Check your inbox for a confirmation link, then log in.");
+      el.studentLoginRoll.value = rollNumber;
+      showAlert(
+        "info",
+        "Account created, but email confirmation is ON. Student logins don’t use email — ask the class admin to confirm this account (or turn OFF “Confirm email” in Supabase), then log in with your roll number."
+      );
     } catch (err) {
-      showAlert("error", friendlyError(err && err.message));
+      cancelAuth();
+      showAlert("error", friendlyError(err && err.message, "student"));
     } finally {
-      setButtonBusy(el.signupBtn, false);
+      setButtonBusy(el.studentSignupBtn, false);
     }
+  }
+
+  async function handleTeacherLogin(event) {
+    event.preventDefault();
+    hideAlerts();
+
+    const email = el.teacherLoginEmail.value.trim();
+    const password = el.teacherLoginPassword.value;
+
+    if (!email || !password) {
+      showAlert("error", "Enter your email and password.");
+      return;
+    }
+    if (!validEmail(email)) {
+      showAlert("error", "Enter a valid email address.");
+      return;
+    }
+
+    beginAuth("teacher", "login");
+    setButtonBusy(el.teacherLoginBtn, true, "Logging in…");
+    try {
+      const { error } = await state.client.auth.signInWithPassword({ email, password });
+      if (error) {
+        cancelAuth();
+        showAlert("error", friendlyError(error.message, "teacher"));
+      }
+    } catch (err) {
+      cancelAuth();
+      showAlert("error", friendlyError(err && err.message, "teacher"));
+    } finally {
+      setButtonBusy(el.teacherLoginBtn, false);
+    }
+  }
+
+  async function handleTeacherSignup(event) {
+    event.preventDefault();
+    hideAlerts();
+
+    const fullName = el.teacherSignupName.value.trim().replace(/\s+/g, " ");
+    const email = el.teacherSignupEmail.value.trim();
+    const password = el.teacherSignupPassword.value;
+
+    if (fullName.length < 2) {
+      showAlert("error", "Enter your full name.");
+      return;
+    }
+    if (!validEmail(email)) {
+      showAlert("error", "Enter a valid email address.");
+      return;
+    }
+    if (password.length < 6) {
+      showAlert("error", "Password must be at least 6 characters.");
+      return;
+    }
+
+    beginAuth("teacher", "signup");
+    setButtonBusy(el.teacherSignupBtn, true, "Sending request…");
+    try {
+      const { data, error } = await state.client.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName, requested_teacher: true },
+          emailRedirectTo: window.location.origin + window.location.pathname,
+        },
+      });
+
+      if (error) {
+        cancelAuth();
+        showAlert("error", friendlyError(error.message, "teacher"));
+        return;
+      }
+
+      if (data && data.session) {
+        return; // enter() detects the unapproved teacher and signs out
+      }
+
+      cancelAuth();
+      el.teacherSignupPassword.value = "";
+      setAuthMode("login");
+      el.teacherLoginEmail.value = email;
+      showAlert(
+        "info",
+        "Request received. Confirm your email if asked, then wait for the class admin to activate teacher access."
+      );
+    } catch (err) {
+      cancelAuth();
+      showAlert("error", friendlyError(err && err.message, "teacher"));
+    } finally {
+      setButtonBusy(el.teacherSignupBtn, false);
+    }
+  }
+
+  async function rejectEntry(message, role, type) {
+    cancelAuth();
+    try {
+      await state.client.auth.signOut();
+    } catch (err) {
+      // Ignore: the account is not allowed in, regardless of sign-out errors.
+    }
+    setAuthRole(role || "student");
+    setAuthMode("login");
+    showAlert(type || "info", message);
   }
 
   async function enter(user) {
@@ -443,6 +651,33 @@
         return;
       }
 
+      const intended = state.intendedRole;
+      if (intended && profile.role !== intended) {
+        const wasSignup = state.authAction === "signup";
+        const message =
+          intended === "teacher"
+            ? profile.roll_number
+              ? "This is a student account. Choose Student to log in with your roll number."
+              : wasSignup
+                ? "Request received. The class admin must activate teacher access before you can log in."
+                : "Teacher access is not active for this account yet. Ask the class admin to approve it, then log in again."
+            : "This is a teacher account. Choose Teacher to log in.";
+
+        await rejectEntry(message, intended, wasSignup ? "info" : "error");
+        return;
+      }
+
+      // Self-service teacher requests are stored as students with no roll number.
+      if (profile.role !== "teacher" && !profile.roll_number) {
+        await rejectEntry(
+          "This account is waiting for admin activation. Ask the class admin to activate it, then log in again.",
+          "teacher",
+          "info"
+        );
+        return;
+      }
+
+      cancelAuth();
       state.user = user;
       state.profile = profile;
       renderHeader();
@@ -458,6 +693,7 @@
       }
     } catch (err) {
       console.error("[assignment-hub] profile load failed:", err);
+      cancelAuth();
       showFatal(friendlyError(err && err.message));
     } finally {
       state.entering = false;
@@ -919,14 +1155,22 @@
   /* ---------- Events ---------- */
 
   function wireEvents() {
+    el.roleTabs.addEventListener("click", (event) => {
+      const tab = event.target.closest(".role-tab");
+      if (!tab) return;
+      setAuthRole(tab.dataset.role === "teacher" ? "teacher" : "student");
+    });
+
     el.authTabs.addEventListener("click", (event) => {
       const tab = event.target.closest(".auth-tab");
       if (!tab) return;
       setAuthMode(tab.dataset.mode === "signup" ? "signup" : "login");
     });
 
-    el.loginForm.addEventListener("submit", handleLogin);
-    el.signupForm.addEventListener("submit", handleSignup);
+    el.studentLoginForm.addEventListener("submit", handleStudentLogin);
+    el.studentSignupForm.addEventListener("submit", handleStudentSignup);
+    el.teacherLoginForm.addEventListener("submit", handleTeacherLogin);
+    el.teacherSignupForm.addEventListener("submit", handleTeacherSignup);
     el.logoutBtn.addEventListener("click", logout);
     el.uploadForm.addEventListener("submit", handleUpload);
 

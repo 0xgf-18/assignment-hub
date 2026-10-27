@@ -100,6 +100,28 @@
       </div>
 
       <section class="card auth-card">
+        <div class="role-switch" id="roleTabs" role="tablist" aria-label="Account type">
+          <button type="button" class="role-tab is-active" data-role="student" role="tab" aria-selected="true">
+            <span class="role-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m3 9 9-4 9 4-9 4-9-4Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                <path d="M7 11.5V16c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                <path d="M21 9v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="role-copy"><strong>Student</strong><small>Roll number</small></span>
+          </button>
+          <button type="button" class="role-tab" data-role="teacher" role="tab" aria-selected="false">
+            <span class="role-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                <path d="M8 21h8M12 17v4M7.5 9.5h3M7.5 12.5h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="role-copy"><strong>Teacher</strong><small>Email</small></span>
+          </button>
+        </div>
+
         <div class="auth-tabs" id="authTabs" role="tablist" aria-label="Authentication">
           <button type="button" class="auth-tab is-active" data-mode="login" role="tab" aria-selected="true">Log in</button>
           <button type="button" class="auth-tab" data-mode="signup" role="tab" aria-selected="false">Sign up</button>
@@ -108,38 +130,68 @@
         <div id="authError" class="alert alert-error" hidden></div>
         <div id="authInfo" class="alert alert-info" hidden></div>
 
-        <form id="loginForm" class="auth-form" novalidate>
+        <!-- Student log in -->
+        <form id="studentLoginForm" class="auth-form" novalidate>
           <div class="field">
-            <label for="loginEmail">Email</label>
-            <input id="loginEmail" type="email" autocomplete="email" placeholder="you@school.com" required />
+            <label for="studentLoginRoll">Roll number</label>
+            <input id="studentLoginRoll" type="text" autocomplete="username" placeholder="e.g. 21" maxlength="20" required />
           </div>
           <div class="field">
-            <label for="loginPassword">Password</label>
-            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Your password" required />
+            <label for="studentLoginPassword">Password</label>
+            <input id="studentLoginPassword" type="password" autocomplete="current-password" placeholder="Your password" required />
           </div>
-          <button class="btn btn-primary btn-block" type="submit" id="loginBtn">Log in</button>
-          <p class="auth-foot">Teacher accounts are created by the class admin.</p>
+          <button class="btn btn-primary btn-block" type="submit" id="studentLoginBtn">Log in as student</button>
+          <p class="auth-foot">No email needed — use the roll number you signed up with.</p>
         </form>
 
-        <form id="signupForm" class="auth-form" novalidate hidden>
+        <!-- Student sign up -->
+        <form id="studentSignupForm" class="auth-form" novalidate hidden>
           <div class="field">
-            <label for="signupName">Full name</label>
-            <input id="signupName" type="text" autocomplete="name" placeholder="e.g. Ayesha Khan" maxlength="80" required />
+            <label for="studentSignupName">Full name</label>
+            <input id="studentSignupName" type="text" autocomplete="name" placeholder="e.g. Ayesha Khan" maxlength="80" required />
           </div>
           <div class="field">
-            <label for="signupRoll">Roll number</label>
-            <input id="signupRoll" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 21" maxlength="20" required />
+            <label for="studentSignupRoll">Roll number</label>
+            <input id="studentSignupRoll" type="text" autocomplete="off" placeholder="e.g. 21" maxlength="20" required />
           </div>
           <div class="field">
-            <label for="signupEmail">Email</label>
-            <input id="signupEmail" type="email" autocomplete="email" placeholder="you@school.com" required />
+            <label for="studentSignupPassword">Password</label>
+            <input id="studentSignupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
           </div>
-          <div class="field">
-            <label for="signupPassword">Password</label>
-            <input id="signupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
-          </div>
-          <button class="btn btn-primary btn-block" type="submit" id="signupBtn">Create student account</button>
+          <button class="btn btn-primary btn-block" type="submit" id="studentSignupBtn">Create student account</button>
           <p class="auth-foot">Use your real name and roll number — your teacher sees them.</p>
+        </form>
+
+        <!-- Teacher log in -->
+        <form id="teacherLoginForm" class="auth-form" novalidate hidden>
+          <div class="field">
+            <label for="teacherLoginEmail">Email</label>
+            <input id="teacherLoginEmail" type="email" autocomplete="email" placeholder="you@school.com" required />
+          </div>
+          <div class="field">
+            <label for="teacherLoginPassword">Password</label>
+            <input id="teacherLoginPassword" type="password" autocomplete="current-password" placeholder="Your password" required />
+          </div>
+          <button class="btn btn-primary btn-block" type="submit" id="teacherLoginBtn">Log in as teacher</button>
+          <p class="auth-foot">Teacher access must be activated by the class admin.</p>
+        </form>
+
+        <!-- Teacher sign up -->
+        <form id="teacherSignupForm" class="auth-form" novalidate hidden>
+          <div class="field">
+            <label for="teacherSignupName">Full name</label>
+            <input id="teacherSignupName" type="text" autocomplete="name" placeholder="e.g. Mr. Rahman" maxlength="80" required />
+          </div>
+          <div class="field">
+            <label for="teacherSignupEmail">Email</label>
+            <input id="teacherSignupEmail" type="email" autocomplete="email" placeholder="you@school.com" required />
+          </div>
+          <div class="field">
+            <label for="teacherSignupPassword">Password</label>
+            <input id="teacherSignupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
+          </div>
+          <button class="btn btn-primary btn-block" type="submit" id="teacherSignupBtn">Request teacher account</button>
+          <p class="auth-foot">The class admin reviews teacher requests before access is enabled.</p>
         </form>
       </section>
 

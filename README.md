@@ -10,7 +10,8 @@ No app install, no build step. Open the link in any phone or computer browser.
 
 | Student side | Teacher side |
 | --- | --- |
-| Sign up with full name + roll number | Log in with the teacher account |
+| Sign up with full name + roll number + password — **no email needed** | Request a teacher account with email + password |
+| Log in with roll number + password | Log in with email + password after the admin activates it |
 | Upload a file with an assignment title | See every submission: student name, roll number, title, file, date |
 | See their own past submissions, view or delete them | Search by name, roll number, or title |
 | Private: students can only see their own files | Download any student's file with one click |
@@ -58,11 +59,14 @@ Everything is plain HTML/CSS/JS — no npm, no build command.
 In Supabase:
 
 - **Authentication → Sign In / Providers → Email**
-  - For an easy classroom setup, turn **Confirm email OFF**. Students can sign up and log in immediately.
-  - If you keep it **ON**, students must click the link in their inbox before logging in.
+  - **Turn “Confirm email” OFF.** This is required for student logins. Students use a roll number + password, so the app derives an internal identifier such as `roll.21@students.assignment-hub.app` behind the scenes. That address is not a real mailbox, so a confirmation link can never be clicked.
+  - If you leave confirmation **ON**, a new student account is created but cannot log in until you confirm it manually in **Authentication → Users** (or turn confirmation off).
+  - Teachers use their real email, so confirmation works normally for them.
 - **Authentication → URL Configuration**
   - **Site URL:** your GitHub Pages address, e.g. `https://yourname.github.io/assignment-hub/`
   - **Redirect URLs:** add the same address.
+
+> Roll numbers must be unique across everyone using the site, because each roll number maps to exactly one login. For multiple sections, use a class prefix such as `10A-21`.
 
 ---
 
@@ -112,14 +116,16 @@ The page includes a title, description, and social-preview tags so it can appear
 
 ---
 
-## 4. Create the teacher account
+## 4. Activate the teacher account
 
-Students create their own accounts from the **Sign up** tab. The teacher account is made once by you.
+Students sign themselves up from **Student → Sign up**. Teacher access is never granted by the website: choosing **Teacher** and signing up only creates a request. The account stays a student with no roll number until you promote it in SQL.
 
-**Option A — sign up, then promote (easiest)**
+**Option A — teacher requests, you approve (easiest)**
 
-1. Open the website → **Sign up** and create an account with the teacher’s email (roll number can be anything, e.g. `T-01`).
-2. In Supabase **SQL Editor**, run (replace the email and name):
+1. Open the website → choose **Teacher** → **Sign up**.
+2. Enter the teacher’s full name, email, and password → **Request teacher account**. If prompted, the teacher confirms their email.
+3. The app shows “waiting for admin activation” until you promote the account.
+4. In Supabase **SQL Editor**, run (replace the email and name):
 
 ```sql
 update public.profiles
@@ -129,12 +135,23 @@ set role = 'teacher',
 where email = 'teacher@example.com';
 ```
 
-3. Log out and log back in. The dashboard now shows **Student submissions**.
+5. Ask the teacher to log in again via **Teacher → Log in** with their email and password. The dashboard now shows **Student submissions**.
+
+To list accounts that signed up with a real email but are still students (likely teacher requests):
+
+```sql
+select full_name, email, created_at
+from public.profiles
+where role = 'student'
+  and email not like 'roll.%@students.assignment-hub.app'
+order by created_at desc;
+```
 
 **Option B — create the user in Supabase**
 
 1. **Authentication → Users → Add user** (enable “Auto Confirm User”).
 2. Run the same `update ... where email = ...` SQL as above.
+3. The teacher logs in via **Teacher → Log in**.
 
 Check who is a teacher:
 
@@ -148,10 +165,10 @@ order by role, full_name;
 
 ## How the app works
 
-1. A student signs up → a row is created in `profiles` with their name and roll number (role `student`).
-2. They enter an assignment title, choose a file, and tap **Upload assignment** → the file goes to the private `assignments` bucket under their user id, and a row is added to `submissions`.
+1. A student signs up → the app turns their roll number into a private internal email (never shown) and creates a row in `profiles` with their name and roll number (role `student`).
+2. They log in with **roll number + password**, enter an assignment title, choose a file, and tap **Upload assignment** → the file goes to the private `assignments` bucket under their user id, and a row is added to `submissions`.
 3. A student can **view** or **delete** only their own uploads. Deleting removes the database row and the stored file.
-4. The teacher opens the site → sees every submission, newest first, with student name + roll number → searches or downloads.
+4. The teacher requests an account, the admin promotes it, then the teacher logs in with **email + password** → sees every submission, newest first, with student name + roll number → searches or downloads.
 5. All file links are **signed URLs** that expire quickly, so files can’t be shared publicly.
 
 Permissions are enforced by Supabase **Row Level Security** (RLS) from `schema.sql`, not by the website code. Even someone who reads the JavaScript cannot list other students’ files.
@@ -194,16 +211,19 @@ Export a CSV: run the “List all submissions” query in the SQL Editor, then u
 | Problem | Fix |
 | --- | --- |
 | “Almost there” screen | Fill in both values in `config.js`; use the exact `https://xxxx.supabase.co` URL. |
-| “Invalid login credentials” | Wrong email/password. If the account was just created and email confirmation is ON, confirm the email first. |
-| “Email not confirmed” | Confirm the email, or turn **Confirm email** OFF in Supabase → Authentication → Email. |
+| “Wrong roll number or password” (student) | Check the roll number exactly as registered and the password. Case and spaces are ignored; each roll number can only have one account. |
+| “Wrong email or password” (teacher) | Check the teacher email and password. The account must also be promoted to `teacher` before it can enter the dashboard. |
+| Student sees “email confirmation is ON” after sign-up | Supabase → Authentication → Email → turn **Confirm email OFF**. Then confirm the account manually in **Authentication → Users**, or ask the student to log in again. |
+| “This account is waiting for admin activation” | The teacher request exists but is still a student. Run the promotion SQL in section 4, then log in again. |
+| “Email not confirmed” | Confirm the email, or turn **Confirm email OFF** in Supabase → Authentication → Email. For students this must be OFF, because their internal address is not a real inbox. |
 | “Supabase blocked this action” / RLS error | `supabase/schema.sql` was not run in full, or was run in the wrong project. Re-run it. |
 | “The 'assignments' storage bucket is missing” | Re-run `schema.sql` (it creates the bucket and policies). |
 | Uploads fail only for big files | The app limit is 25 MB. Supabase also has a project upload limit (default 50 MB) under **Storage → Settings**. |
-| Teacher still sees the student view | Run the teacher `update` SQL, then log out and log back in. |
+| Teacher still sees the student view | Run the promotion SQL in section 4, then log out and log back in. Choosing **Teacher** on the website does not grant access. |
 | Confirmation link opens `localhost` | Set **Site URL** in Supabase → Authentication → URL Configuration to your GitHub Pages address. |
 | Download button does nothing | Re-run `schema.sql`; pop-up blockers can also block the tab — allow pop-ups for the site. |
 | Changes don’t show up | Wait for the GitHub Pages build (Actions tab) and hard-refresh the page. |
-| Signup says “rate limit” | Supabase limits confirmation emails; wait a minute or turn email confirmation OFF. |
+| Signup says “rate limit” | Supabase limits confirmation emails; wait a minute or turn email confirmation OFF. Student signups don’t need email at all. |
 
 ---
 
@@ -213,6 +233,8 @@ Export a CSV: run the “List all submissions” query in the SQL Editor, then u
 - **Never** put the `service_role` key in the website, GitHub, or chat.
 - Students can read, view and delete only their own submissions and files.
 - Teachers can read all submissions and download all files because of `public.is_teacher()`.
+- Choosing **Teacher** at sign-up only sends a request: the database trigger always creates new accounts as `student`. Only your SQL can promote a teacher.
+- Student roll numbers are converted into internal email identifiers for Supabase Auth. They are not real inboxes and are never shown to other students.
 - Only you can promote a teacher — by running SQL in Supabase. The website cannot change roles.
 - Free Supabase projects pause after a period of inactivity; open the Supabase dashboard and restore the project if the site suddenly can’t load data.
 
