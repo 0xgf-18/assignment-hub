@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="color-scheme" content="light" />
+  <meta name="description" content="A simple online assignment portal. Students upload their work with name and roll number; teachers review and download every submission in one place." />
+  <meta name="robots" content="index, follow" />
+  <title>Assignment Hub — Submit &amp; Review Class Assignments</title>
+
+  <link rel="canonical" href="https://0xgf-18.github.io/assignment-hub/" />
+
+  <!-- Link previews (WhatsApp, Facebook, etc.) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://0xgf-18.github.io/assignment-hub/" />
+  <meta property="og:title" content="Assignment Hub" />
+  <meta property="og:description" content="Students submit assignments online. Teachers review every upload by name and roll number." />
+  <meta property="og:image" content="https://0xgf-18.github.io/assignment-hub/icons/icon-512.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Assignment Hub" />
+  <meta name="twitter:description" content="Students submit assignments online. Teachers review every upload by name and roll number." />
+
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Boot / splash -->
+  <div id="boot" class="boot">
+    <div class="boot-logo">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H14l6 6v8.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M14 4v6h6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="m8.5 14.5 2 2 4-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <p class="boot-title">Assignment Hub</p>
+    <div class="spinner" aria-label="Loading"></div>
+  </div>
+
+  <!-- Missing / bad configuration -->
+  <main id="setupView" class="center-wrap" hidden>
+    <section class="card setup-card">
+      <div class="setup-icon">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 9v4m0 4h.01M10.3 3.9 2.4 17.4A1.8 1.8 0 0 0 4 20h16a1.8 1.8 0 0 0 1.6-2.6L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Almost there</h1>
+      <p class="muted">This app needs its Supabase keys before it can run. Open <code>config.js</code> and fill in the two values.</p>
+      <ol class="setup-steps">
+        <li>Create a free project at <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a>.</li>
+        <li>Run <code>supabase/schema.sql</code> in the Supabase <strong>SQL Editor</strong>.</li>
+        <li>Copy <strong>Project URL</strong> and the <strong>anon / publishable key</strong> from Project Settings → API into <code>config.js</code>.</li>
+        <li>Publish this folder to GitHub Pages and reload.</li>
+      </ol>
+      <pre class="setup-code">window.APP_CONFIG = {
+  SUPABASE_URL: "https://YOUR-PROJECT.supabase.co",
+  SUPABASE_ANON_KEY: "YOUR-ANON-KEY"
+};</pre>
+      <p class="setup-detail" id="setupDetail"></p>
+      <p class="muted small">Full walkthrough: <code>README.md</code></p>
+    </section>
+  </main>
+
+  <!-- Fatal load error -->
+  <main id="fatalView" class="center-wrap" hidden>
+    <section class="card setup-card">
+      <div class="setup-icon">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 7.5v5.5m0 3.5h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Could not start</h1>
+      <p class="muted" id="fatalMessage">Something went wrong while loading the app.</p>
+      <button class="btn btn-primary" id="fatalRetry">Reload the page</button>
+    </section>
+  </main>
+
+  <!-- Auth -->
+  <main id="authView" class="auth-wrap" hidden>
+    <div class="auth-inner">
+      <div class="auth-brand">
+        <div class="brand-mark lg">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H14l6 6v8.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M14 4v6h6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="m8.5 14.5 2 2 4-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h1>Assignment Hub</h1>
+        <p>Students submit. Teachers review.<br />Everyone stays organised.</p>
+      </div>
+
+      <section class="card auth-card">
+        <div class="auth-tabs" id="authTabs" role="tablist" aria-label="Authentication">
+          <button type="button" class="auth-tab is-active" data-mode="login" role="tab" aria-selected="true">Log in</button>
+          <button type="button" class="auth-tab" data-mode="signup" role="tab" aria-selected="false">Sign up</button>
+        </div>
+
+        <div id="authError" class="alert alert-error" hidden></div>
+        <div id="authInfo" class="alert alert-info" hidden></div>
+
+        <form id="loginForm" class="auth-form" novalidate>
+          <div class="field">
+            <label for="loginEmail">Email</label>
+            <input id="loginEmail" type="email" autocomplete="email" placeholder="you@school.com" required />
+          </div>
+          <div class="field">
+            <label for="loginPassword">Password</label>
+            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Your password" required />
+          </div>
+          <button class="btn btn-primary btn-block" type="submit" id="loginBtn">Log in</button>
+          <p class="auth-foot">Teacher accounts are created by the class admin.</p>
+        </form>
+
+        <form id="signupForm" class="auth-form" novalidate hidden>
+          <div class="field">
+            <label for="signupName">Full name</label>
+            <input id="signupName" type="text" autocomplete="name" placeholder="e.g. Ayesha Khan" maxlength="80" required />
+          </div>
+          <div class="field">
+            <label for="signupRoll">Roll number</label>
+            <input id="signupRoll" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 21" maxlength="20" required />
+          </div>
+          <div class="field">
+            <label for="signupEmail">Email</label>
+            <input id="signupEmail" type="email" autocomplete="email" placeholder="you@school.com" required />
+          </div>
+          <div class="field">
+            <label for="signupPassword">Password</label>
+            <input id="signupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
+          </div>
+          <button class="btn btn-primary btn-block" type="submit" id="signupBtn">Create student account</button>
+          <p class="auth-foot">Use your real name and roll number — your teacher sees them.</p>
+        </form>
+      </section>
+
+      <p class="auth-legal">A simple assignment portal for your class.</p>
+    </div>
+  </main>
+
+  <!-- App -->
+  <div id="appView" hidden>
+    <header class="app-header">
+      <div class="header-inner">
+        <a class="brand-mini" href="./" aria-label="Assignment Hub home">
+          <span class="brand-mark sm">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H14l6 6v8.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M14 4v6h6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="m8.5 14.5 2 2 4-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="brand-name">Assignment Hub</span>
+        </a>
+
+        <div class="user-box">
+          <span class="avatar" id="userAvatar" aria-hidden="true">?</span>
+          <span class="user-text">
+            <span class="user-name" id="userName">User</span>
+            <span class="user-sub" id="userSub">Student</span>
+          </span>
+          <button class="icon-btn" id="logoutBtn" type="button" title="Log out" aria-label="Log out">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+
+      <!-- Student -->
+      <section id="studentView" class="view" hidden>
+        <div class="hero">
+          <p class="eyebrow">Student portal</p>
+          <h1>Hi, <span id="studentFirst">there</span></h1>
+          <p class="hero-sub">Upload your work below. It goes straight to your teacher with your name and roll number attached.</p>
+        </div>
+
+        <section class="card upload-card">
+          <div class="card-head">
+            <h2>Submit an assignment</h2>
+            <span class="pill pill-soft" id="studentRollPill">Roll —</span>
+          </div>
+
+          <form id="uploadForm" novalidate>
+            <div class="field">
+              <label for="assignmentTitle">Assignment title</label>
+              <input id="assignmentTitle" type="text" placeholder="e.g. Chapter 4 — Algebra worksheet" maxlength="80" required />
+            </div>
+
+            <div class="field">
+              <label>Your file</label>
+              <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Choose a file to upload">
+                <input id="fileInput" type="file" hidden />
+                <div class="dz-icon">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 16V4m0 0L8 8m4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <p class="dz-title">Tap to choose a file</p>
+                <p class="dz-sub">or drag &amp; drop here · PDF, Word, images, ZIP · up to 25 MB</p>
+              </div>
+              <div class="file-preview" id="filePreview" hidden>
+                <span class="file-badge" id="previewExt">FILE</span>
+                <span class="file-preview-main">
+                  <span class="file-preview-name" id="previewName"></span>
+                  <span class="file-preview-size" id="previewSize"></span>
+                </span>
+                <button class="icon-btn subtle" type="button" id="clearFile" aria-label="Remove selected file">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="upload-actions">
+              <button class="btn btn-primary" type="submit" id="uploadBtn">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 16V4m0 0L8 8m4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                <span>Upload assignment</span>
+              </button>
+              <div class="progress" id="uploadProgress" hidden><span></span></div>
+            </div>
+            <p class="form-note" id="uploadNote" hidden></p>
+          </form>
+        </section>
+
+        <div class="section-head">
+          <h2>My submissions <span class="count-pill" id="myCount">0</span></h2>
+          <button class="icon-btn" id="refreshMine" type="button" title="Refresh" aria-label="Refresh submissions">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M20 4v4h-4M4 20v-4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="list" id="myList" aria-live="polite"></div>
+        <div class="empty" id="myEmpty" hidden>
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H14l6 6v8.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+              <path d="M14 4v6h6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>Nothing submitted yet</h3>
+          <p>Your uploaded assignments will appear here.</p>
+        </div>
+      </section>
+
+      <!-- Teacher -->
+      <section id="teacherView" class="view" hidden>
+        <div class="hero">
+          <p class="eyebrow">Teacher dashboard</p>
+          <h1>Student submissions</h1>
+          <p class="hero-sub">Every upload appears with the student's name, roll number and file — ready to review.</p>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-label">Submissions</span>
+            <span class="stat-value" id="statTotal">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Students</span>
+            <span class="stat-value" id="statStudents">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Latest</span>
+            <span class="stat-value stat-value-sm" id="statLatest">—</span>
+          </div>
+        </div>
+
+        <section class="card panel">
+          <div class="toolbar">
+            <div class="search-wrap">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/>
+                <path d="m16.5 16.5 3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              <input id="teacherSearch" type="search" placeholder="Search name or roll number" aria-label="Search submissions" />
+            </div>
+            <button class="icon-btn" id="refreshAll" type="button" title="Refresh" aria-label="Refresh submissions">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M20 4v4h-4M4 20v-4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="list teacher-list" id="teacherList" aria-live="polite"></div>
+
+          <div class="empty" id="teacherEmpty" hidden>
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 id="teacherEmptyTitle">No submissions yet</h3>
+            <p id="teacherEmptyText">As soon as a student uploads, it will show up here.</p>
+          </div>
+        </section>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

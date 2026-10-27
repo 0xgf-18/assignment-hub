@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Assignment Hub">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1" />
+      <stop offset="0.55" stop-color="#4f46e5" />
+      <stop offset="1" stop-color="#7c3aed" />
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#f2f4ff" />
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+
+  <!-- document -->
+  <path d="M174 120h122l70 70v174a28 28 0 0 1-28 28H174a28 28 0 0 1-28-28V148a28 28 0 0 1 28-28Z" fill="url(#paper)" />
+  <path d="M296 120l70 70h-42a28 28 0 0 1-28-28v-42Z" fill="#d9def8" />
+
+  <!-- text lines -->
+  <rect x="180" y="238" width="130" height="16" rx="8" fill="#d5daf2" />
+  <rect x="180" y="278" width="102" height="16" rx="8" fill="#d5daf2" />
+  <rect x="180" y="318" width="118" height="16" rx="8" fill="#d5daf2" />
+
+  <!-- check badge -->
+  <circle cx="354" cy="372" r="66" fill="#10b981" stroke="#ffffff" stroke-width="14" />
+  <path d="M324 372l21 21 40-46" fill="none" stroke="#ffffff" stroke-width="17" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

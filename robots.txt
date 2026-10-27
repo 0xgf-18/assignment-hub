@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://0xgf-18.github.io/assignment-hub/sitemap.xml
