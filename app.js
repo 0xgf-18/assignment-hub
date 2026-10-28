@@ -12,6 +12,7 @@
   const SUPA_URL = String(cfg.SUPABASE_URL || "").trim();
   const SUPA_KEY = String(cfg.SUPABASE_ANON_KEY || "").trim();
   const BUCKET = "assignments";
+  const MATERIALS_BUCKET = "materials";
   const MAX_BYTES = 25 * 1024 * 1024;
 
   // Students log in with a roll number, but Supabase Auth needs an email.
@@ -30,6 +31,10 @@
     mine: [],
     rows: [],
     students: [],
+    messages: [],
+    materials: [],
+    lastUnreadCount: 0,
+    messagePoll: null,
     query: "",
     entering: false,
   };
@@ -96,6 +101,16 @@
     myList: $("myList"),
     myEmpty: $("myEmpty"),
 
+    studentMsgCount: $("studentMsgCount"),
+    studentUnreadPill: $("studentUnreadPill"),
+    refreshStudentMessages: $("refreshStudentMessages"),
+    studentMessageList: $("studentMessageList"),
+    studentMessageEmpty: $("studentMessageEmpty"),
+    studentMaterialCount: $("studentMaterialCount"),
+    refreshStudentMaterials: $("refreshStudentMaterials"),
+    studentMaterialList: $("studentMaterialList"),
+    studentMaterialEmpty: $("studentMaterialEmpty"),
+
     teacherView: $("teacherView"),
     statTotal: $("statTotal"),
     statStudents: $("statStudents"),
@@ -111,6 +126,27 @@
     rosterEmpty: $("rosterEmpty"),
     submissionsPanel: $("submissionsPanel"),
 
+    messageForm: $("messageForm"),
+    messageRecipient: $("messageRecipient"),
+    messageBody: $("messageBody"),
+    sendMessageBtn: $("sendMessageBtn"),
+    messageNote: $("messageNote"),
+    refreshSentMessages: $("refreshSentMessages"),
+    sentMsgCount: $("sentMsgCount"),
+    teacherMessageList: $("teacherMessageList"),
+    teacherMessageEmpty: $("teacherMessageEmpty"),
+    materialForm: $("materialForm"),
+    materialTitle: $("materialTitle"),
+    materialFile: $("materialFile"),
+    materialFileHint: $("materialFileHint"),
+    materialUploadBtn: $("materialUploadBtn"),
+    materialProgress: $("materialProgress"),
+    materialNote: $("materialNote"),
+    refreshTeacherMaterials: $("refreshTeacherMaterials"),
+    teacherMaterialCount: $("teacherMaterialCount"),
+    teacherMaterialList: $("teacherMaterialList"),
+    teacherMaterialEmpty: $("teacherMaterialEmpty"),
+
     toasts: $("toasts"),
   };
 
@@ -120,10 +156,22 @@
   const ICON_EYE = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>`;
   const ICON_TRASH = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6.5 7l.8 12a1.6 1.6 0 0 0 1.6 1.5h6.2a1.6 1.6 0 0 0 1.6-1.5l.8-12M10 11v5.5M14 11v5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const ICON_CHECK = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const ICON_CHAT = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5v-7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
   const ICON_WARN = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8v5m0 3h.01M10.3 3.9 2.4 17.4A1.8 1.8 0 0 0 4 20h16a1.8 1.8 0 0 0 1.6-2.6L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
 
   const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ESC_MAP[c]);
+
+  function uuid() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+      return window.crypto.randomUUID();
+    }
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+      const random = (Math.random() * 16) | 0;
+      const value = char === "x" ? random : (random & 0x3) | 0x8;
+      return value.toString(16);
+    });
+  }
 
   const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
   const dateFmt = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -398,6 +446,11 @@
           state.profile = null;
           state.mine = [];
           state.rows = [];
+          state.students = [];
+          state.messages = [];
+          state.materials = [];
+          state.lastUnreadCount = 0;
+          stopMessagePolling();
           showAuth();
           return;
         }
@@ -685,16 +738,19 @@
       cancelAuth();
       state.user = user;
       state.profile = profile;
+      state.lastUnreadCount = 0;
+      stopMessagePolling();
       renderHeader();
 
       if (profile.role === "teacher") {
         showTeacherPanel();
         setTopView(el.appView);
-        await loadTeacher();
+        await Promise.all([loadTeacher(), loadMessages(), loadMaterials()]);
       } else {
         showStudentPanel();
         setTopView(el.appView);
-        await loadMine();
+        await Promise.all([loadMine(), loadMessages(), loadMaterials()]);
+        startMessagePolling();
       }
     } catch (err) {
       console.error("[assignment-hub] profile load failed:", err);
@@ -789,6 +845,20 @@
     el.uploadNote.textContent = message;
     el.uploadNote.className = "form-note" + (type ? ` is-${type}` : "");
     el.uploadNote.hidden = false;
+  }
+
+  function setFormNote(node, message, type) {
+    if (!node) return;
+    node.textContent = message;
+    node.className = "form-note" + (type ? ` is-${type}` : "");
+    node.hidden = false;
+  }
+
+  function clearFormNote(node) {
+    if (!node) return;
+    node.hidden = true;
+    node.textContent = "";
+    node.className = "form-note";
   }
 
   async function handleUpload(event) {
@@ -1029,6 +1099,8 @@
     }
 
     renderRoster();
+    renderMessageRecipients();
+    renderMessages();
   }
 
   async function removeStudent(id, btn) {
@@ -1075,6 +1147,7 @@
 
       state.students = state.students.filter((item) => item.id !== id);
       state.rows = state.rows.filter((row) => row.student_id !== id);
+      state.messages = state.messages.filter((message) => message.recipient_id !== id);
 
       const query = state.query.trim().toLowerCase();
       if (query && (query === String(student.roll_number || "").toLowerCase() || query === name.toLowerCase())) {
@@ -1084,10 +1157,597 @@
 
       updateStats();
       renderRoster();
+      renderMessageRecipients();
+      renderMessages();
       renderTeacher();
       toast("Student account removed.");
     } catch (err) {
       console.error("[assignment-hub] remove student failed:", err);
+      toast(friendlyError(err && err.message), "error");
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove("is-loading");
+      }
+    }
+  }
+
+  /* ---------- Messages ---------- */
+
+  function stopMessagePolling() {
+    if (state.messagePoll) {
+      window.clearInterval(state.messagePoll);
+      state.messagePoll = null;
+    }
+  }
+
+  function startMessagePolling() {
+    stopMessagePolling();
+    if (!state.profile || state.profile.role !== "student") return;
+
+    state.messagePoll = window.setInterval(() => {
+      if (document.visibilityState === "visible") loadMessages({ silent: true });
+    }, 45000);
+  }
+
+  function renderMessageRecipients() {
+    if (!el.messageRecipient || !state.profile || state.profile.role !== "teacher") return;
+
+    const selected = el.messageRecipient.value || "all";
+    const options = [`<option value="all">All students (${state.students.length})</option>`];
+
+    for (const student of state.students) {
+      const name = student.full_name || "Student";
+      const roll = student.roll_number ? ` — Roll ${student.roll_number}` : "";
+      options.push(`<option value="${escapeHtml(student.id)}">${escapeHtml(name + roll)}</option>`);
+    }
+
+    el.messageRecipient.innerHTML = options.join("");
+    const exists = Array.from(el.messageRecipient.options).some((option) => option.value === selected);
+    el.messageRecipient.value = exists ? selected : "all";
+    if (el.sendMessageBtn) el.sendMessageBtn.disabled = state.students.length === 0;
+  }
+
+  function studentMessageRow(message) {
+    const unread = !message.read_at;
+    const label = message.audience === "all" ? "Class announcement" : "Personal message";
+
+    return `<article class="sub-item message-item${unread ? " is-unread" : ""}">
+      <span class="message-badge" aria-hidden="true">${ICON_CHAT}</span>
+      <div class="sub-main">
+        <div class="student-line">
+          <h3>${escapeHtml(label)}</h3>
+          ${unread ? `<span class="pill pill-new">New</span>` : ""}
+        </div>
+        <p class="message-body">${escapeHtml(message.body)}</p>
+        <p class="sub-meta">
+          <time datetime="${escapeHtml(message.created_at)}" title="${escapeHtml(fullDate(message.created_at))}">${escapeHtml(timeAgo(message.created_at))}</time>
+        </p>
+      </div>
+      ${unread
+        ? `<button class="btn-soft" type="button" data-mark-message="${escapeHtml(message.id)}" aria-label="Mark message as read">${ICON_CHECK}<span>Mark read</span></button>`
+        : `<span class="read-pill">Read</span>`}
+    </article>`;
+  }
+
+  function sentMessageRow(group) {
+    const total = group.recipients.length;
+    const read = group.recipients.filter((message) => message.read_at).length;
+    let label;
+    let directRoll = "";
+
+    if (group.audience === "all") {
+      label = `All students (${total})`;
+    } else {
+      const student = state.students.find((item) => item.id === group.recipients[0].recipient_id);
+      label = student ? `To ${student.full_name}` : "To 1 student";
+      directRoll = student && student.roll_number ? student.roll_number : "";
+    }
+
+    return `<article class="sub-item message-sent-item">
+      <span class="message-badge" aria-hidden="true">${ICON_CHAT}</span>
+      <div class="sub-main">
+        <div class="student-line">
+          <h3>${escapeHtml(label)}</h3>
+          <span class="read-pill">${read}/${total} read</span>
+        </div>
+        <p class="message-preview">${escapeHtml(group.body)}</p>
+        <p class="sub-meta">
+          <time datetime="${escapeHtml(group.created_at)}" title="${escapeHtml(fullDate(group.created_at))}">${escapeHtml(timeAgo(group.created_at))}</time>
+          <span class="dot">·</span>
+          <span>${group.audience === "all" ? "Announcement" : `Direct message${directRoll ? ` · Roll ${escapeHtml(directRoll)}` : ""}`}</span>
+        </p>
+      </div>
+      <button class="icon-btn subtle danger" type="button" data-delete-message-batch="${escapeHtml(group.batch_id)}" aria-label="Delete this message" title="Delete this message for all recipients">
+        ${ICON_TRASH}
+      </button>
+    </article>`;
+  }
+
+  function renderStudentMessages() {
+    const total = state.messages.length;
+    const unread = state.messages.filter((message) => !message.read_at).length;
+
+    el.studentMsgCount.textContent = String(total);
+    el.studentUnreadPill.hidden = unread === 0;
+    el.studentUnreadPill.textContent = `${unread} new`;
+    el.studentMessageList.innerHTML = state.messages.map(studentMessageRow).join("");
+    el.studentMessageList.hidden = total === 0;
+    el.studentMessageEmpty.hidden = total > 0;
+  }
+
+  function renderTeacherMessages() {
+    const groups = new Map();
+
+    for (const message of state.messages) {
+      const key = message.batch_id || message.id;
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          batch_id: key,
+          body: message.body,
+          audience: message.audience,
+          created_at: message.created_at,
+          recipients: [],
+        };
+        groups.set(key, group);
+      }
+      group.recipients.push(message);
+    }
+
+    const list = Array.from(groups.values()).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    el.sentMsgCount.textContent = String(list.length);
+    el.teacherMessageList.innerHTML = list.map(sentMessageRow).join("");
+    el.teacherMessageList.hidden = list.length === 0;
+    el.teacherMessageEmpty.hidden = list.length > 0;
+  }
+
+  function renderMessages() {
+    if (!state.profile) return;
+    if (state.profile.role === "teacher") {
+      renderTeacherMessages();
+    } else {
+      renderStudentMessages();
+    }
+  }
+
+  async function loadMessages(options = {}) {
+    if (!state.user || !state.profile) return;
+    const silent = Boolean(options.silent);
+    const isTeacher = state.profile.role === "teacher";
+    const list = isTeacher ? el.teacherMessageList : el.studentMessageList;
+    const empty = isTeacher ? el.teacherMessageEmpty : el.studentMessageEmpty;
+
+    if (!silent) {
+      list.innerHTML = skeletonList(2);
+      empty.hidden = true;
+    }
+
+    try {
+      let query = state.client.from("messages").select("*").order("created_at", { ascending: false });
+      query = isTeacher
+        ? query.eq("teacher_id", state.user.id)
+        : query.eq("recipient_id", state.user.id);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const next = data || [];
+      if (silent && JSON.stringify(next) === JSON.stringify(state.messages)) return;
+
+      state.messages = next;
+      renderMessages();
+
+      if (!isTeacher) {
+        const unread = state.messages.filter((message) => !message.read_at).length;
+        if (unread > state.lastUnreadCount) {
+          toast(`${unread} new message${unread === 1 ? "" : "s"} from your teacher.`);
+        }
+        state.lastUnreadCount = unread;
+      }
+    } catch (err) {
+      if (silent) return;
+      console.error("[assignment-hub] messages load failed:", err);
+      state.messages = [];
+      list.innerHTML = `<div class="alert alert-error">${escapeHtml(friendlyError(err && err.message))}</div>`;
+      empty.hidden = true;
+    }
+  }
+
+  async function handleSendMessage(event) {
+    event.preventDefault();
+    clearFormNote(el.messageNote);
+
+    const body = el.messageBody.value.trim();
+    const target = el.messageRecipient.value || "all";
+    const selected = target === "all" ? null : state.students.find((student) => student.id === target);
+
+    if (!body) {
+      setFormNote(el.messageNote, "Write a message first.", "error");
+      el.messageBody.focus();
+      return;
+    }
+
+    if (target !== "all" && !selected) {
+      setFormNote(el.messageNote, "That student is no longer in the roster. Choose another recipient.", "error");
+      renderMessageRecipients();
+      return;
+    }
+
+    const recipients = target === "all" ? state.students.map((student) => student.id) : [selected.id];
+    if (!recipients.length) {
+      setFormNote(el.messageNote, "There are no students to message yet.", "error");
+      return;
+    }
+
+    const batchId = uuid();
+    const audience = target === "all" ? "all" : "student";
+    const rows = recipients.map((recipientId) => ({
+      teacher_id: state.user.id,
+      recipient_id: recipientId,
+      batch_id: batchId,
+      audience,
+      body,
+    }));
+
+    setButtonBusy(el.sendMessageBtn, true, "Sending…");
+
+    try {
+      const { error } = await state.client.from("messages").insert(rows);
+      if (error) throw error;
+
+      el.messageBody.value = "";
+      setFormNote(
+        el.messageNote,
+        target === "all"
+          ? `Message sent to all ${recipients.length} student${recipients.length === 1 ? "" : "s"}.`
+          : "Message sent to the student.",
+        "success"
+      );
+      toast(target === "all" ? "Announcement sent to every student." : "Message sent.");
+      await loadMessages();
+    } catch (err) {
+      console.error("[assignment-hub] send message failed:", err);
+      setFormNote(el.messageNote, friendlyError(err && err.message), "error");
+      toast("Could not send the message.", "error");
+    } finally {
+      setButtonBusy(el.sendMessageBtn, false);
+    }
+  }
+
+  async function markMessageRead(id, btn) {
+    const message = state.messages.find((item) => item.id === id);
+    if (!message || message.read_at) return;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("is-loading");
+    }
+
+    try {
+      const readAt = new Date().toISOString();
+      const { error } = await state.client
+        .from("messages")
+        .update({ read_at: readAt })
+        .eq("id", id)
+        .eq("recipient_id", state.user.id);
+
+      if (error) throw error;
+
+      state.messages = state.messages.map((item) =>
+        item.id === id ? { ...item, read_at: readAt } : item
+      );
+      state.lastUnreadCount = state.messages.filter((item) => !item.read_at).length;
+      renderMessages();
+      toast("Message marked as read.");
+    } catch (err) {
+      console.error("[assignment-hub] mark message failed:", err);
+      toast(friendlyError(err && err.message), "error");
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove("is-loading");
+      }
+    }
+  }
+
+  async function deleteMessageBatch(batchId, btn) {
+    const messages = state.messages.filter((message) => message.batch_id === batchId);
+    if (!messages.length) return;
+
+    const confirmed = window.confirm(
+      "Delete this message for every recipient?\n\nStudents will no longer see it."
+    );
+    if (!confirmed) return;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("is-loading");
+    }
+
+    try {
+      const { error } = await state.client
+        .from("messages")
+        .delete()
+        .eq("batch_id", batchId)
+        .eq("teacher_id", state.user.id);
+
+      if (error) throw error;
+
+      state.messages = state.messages.filter((message) => message.batch_id !== batchId);
+      renderMessages();
+      toast("Message deleted.");
+    } catch (err) {
+      console.error("[assignment-hub] delete message failed:", err);
+      toast(friendlyError(err && err.message), "error");
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove("is-loading");
+      }
+    }
+  }
+
+  /* ---------- Class materials ---------- */
+
+  function materialRow(material, canDelete) {
+    const title = material.title || "Class material";
+
+    return `<article class="sub-item material-item">
+      <span class="file-badge ${extClass(material.file_name)}" aria-hidden="true">${escapeHtml(extOf(material.file_name))}</span>
+      <div class="sub-main">
+        <h3 title="${escapeHtml(title)}">${escapeHtml(title)}</h3>
+        <p class="sub-meta">
+          <span class="file-name" title="${escapeHtml(material.file_name)}">${escapeHtml(material.file_name)}</span>
+          <span class="dot">·</span><span>${fmtBytes(material.file_size)}</span>
+          <span class="dot">·</span>
+          <time datetime="${escapeHtml(material.created_at)}" title="${escapeHtml(fullDate(material.created_at))}">${escapeHtml(timeAgo(material.created_at))}</time>
+        </p>
+      </div>
+      <div class="row-actions">
+        <button class="btn-soft" type="button" data-material-view="${escapeHtml(material.id)}" aria-label="View ${escapeHtml(title)}">
+          ${ICON_EYE}<span>View</span>
+        </button>
+        <button class="btn-soft" type="button" data-material-download="${escapeHtml(material.id)}" aria-label="Download ${escapeHtml(title)}">
+          ${ICON_DOWNLOAD}<span>Download</span>
+        </button>
+        ${canDelete ? `<button class="btn-soft danger" type="button" data-material-delete="${escapeHtml(material.id)}" aria-label="Delete ${escapeHtml(title)}">
+          ${ICON_TRASH}<span>Delete</span>
+        </button>` : ""}
+      </div>
+    </article>`;
+  }
+
+  function renderMaterials() {
+    const total = state.materials.length;
+
+    el.studentMaterialCount.textContent = String(total);
+    el.teacherMaterialCount.textContent = String(total);
+    el.studentMaterialList.innerHTML = state.materials.map((material) => materialRow(material, false)).join("");
+    el.teacherMaterialList.innerHTML = state.materials.map((material) => materialRow(material, true)).join("");
+    el.studentMaterialList.hidden = total === 0;
+    el.teacherMaterialList.hidden = total === 0;
+    el.studentMaterialEmpty.hidden = total > 0;
+    el.teacherMaterialEmpty.hidden = total > 0;
+  }
+
+  async function loadMaterials() {
+    if (!state.user || !state.profile) return;
+    const isTeacher = state.profile.role === "teacher";
+    const list = isTeacher ? el.teacherMaterialList : el.studentMaterialList;
+    const empty = isTeacher ? el.teacherMaterialEmpty : el.studentMaterialEmpty;
+
+    list.innerHTML = skeletonList(2);
+    empty.hidden = true;
+
+    try {
+      const { data, error } = await state.client
+        .from("materials")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      state.materials = data || [];
+      renderMaterials();
+    } catch (err) {
+      console.error("[assignment-hub] materials load failed:", err);
+      state.materials = [];
+      list.innerHTML = `<div class="alert alert-error">${escapeHtml(friendlyError(err && err.message))}</div>`;
+      empty.hidden = true;
+    }
+  }
+
+  function resetMaterialForm() {
+    el.materialTitle.value = "";
+    el.materialFile.value = "";
+    el.materialFileHint.textContent = "PDF, Word, slides, images — up to 25 MB.";
+    el.materialProgress.hidden = true;
+  }
+
+  function handleMaterialFileChange() {
+    clearFormNote(el.materialNote);
+    const file = el.materialFile.files && el.materialFile.files[0];
+    el.materialFileHint.textContent = file
+      ? `${file.name} · ${fmtBytes(file.size)}`
+      : "PDF, Word, slides, images — up to 25 MB.";
+  }
+
+  async function handleMaterialUpload(event) {
+    event.preventDefault();
+    clearFormNote(el.materialNote);
+
+    if (!state.profile || state.profile.role !== "teacher") return;
+
+    const title = el.materialTitle.value.trim();
+    const file = el.materialFile.files && el.materialFile.files[0];
+
+    if (!title) {
+      setFormNote(el.materialNote, "Add a title for this material.", "error");
+      el.materialTitle.focus();
+      return;
+    }
+
+    if (!file) {
+      setFormNote(el.materialNote, "Choose a file to upload.", "error");
+      el.materialFile.focus();
+      return;
+    }
+
+    if (file.size > MAX_BYTES) {
+      setFormNote(el.materialNote, "That file is too large. Maximum size is 25 MB.", "error");
+      return;
+    }
+
+    const path = `${state.user.id}/${Date.now()}-${safeFileName(file.name)}`;
+
+    setButtonBusy(el.materialUploadBtn, true, "Uploading…");
+    el.materialProgress.hidden = false;
+
+    try {
+      const { error: uploadError } = await state.client.storage
+        .from(MATERIALS_BUCKET)
+        .upload(path, file, {
+          contentType: file.type || "application/octet-stream",
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { error: insertError } = await state.client.from("materials").insert({
+        teacher_id: state.user.id,
+        title,
+        file_path: path,
+        file_name: file.name,
+        file_size: file.size,
+      });
+
+      if (insertError) {
+        try {
+          await state.client.storage.from(MATERIALS_BUCKET).remove([path]);
+        } catch (_) {
+          /* best effort cleanup */
+        }
+        throw insertError;
+      }
+
+      resetMaterialForm();
+      setFormNote(el.materialNote, "Material uploaded — every student can now view it.", "success");
+      toast("Class material uploaded.");
+      await loadMaterials();
+    } catch (err) {
+      console.error("[assignment-hub] material upload failed:", err);
+      setFormNote(el.materialNote, friendlyError(err && err.message), "error");
+      toast("Upload failed. Please try again.", "error");
+    } finally {
+      setButtonBusy(el.materialUploadBtn, false);
+      el.materialProgress.hidden = true;
+    }
+  }
+
+  async function viewMaterial(id, btn) {
+    const material = state.materials.find((item) => item.id === id);
+    if (!material) {
+      toast("That material could not be found.", "error");
+      return;
+    }
+
+    const preview = window.open("", "_blank");
+    if (btn) btn.classList.add("is-loading");
+
+    try {
+      const { data, error } = await state.client.storage
+        .from(MATERIALS_BUCKET)
+        .createSignedUrl(material.file_path, 300);
+
+      if (error) throw error;
+
+      if (preview) {
+        preview.location.href = data.signedUrl;
+      } else {
+        window.location.href = data.signedUrl;
+      }
+    } catch (err) {
+      if (preview) preview.close();
+      console.error("[assignment-hub] view material failed:", err);
+      toast(friendlyError(err && err.message), "error");
+    } finally {
+      if (btn) btn.classList.remove("is-loading");
+    }
+  }
+
+  async function downloadMaterial(id, btn) {
+    const material = state.materials.find((item) => item.id === id);
+    if (!material) {
+      toast("That material could not be found.", "error");
+      return;
+    }
+
+    if (btn) btn.classList.add("is-loading");
+
+    try {
+      const { data, error } = await state.client.storage
+        .from(MATERIALS_BUCKET)
+        .createSignedUrl(material.file_path, 120, { download: material.file_name || true });
+
+      if (error) throw error;
+
+      const link = document.createElement("a");
+      link.href = data.signedUrl;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("[assignment-hub] download material failed:", err);
+      toast(friendlyError(err && err.message), "error");
+    } finally {
+      if (btn) btn.classList.remove("is-loading");
+    }
+  }
+
+  async function deleteMaterial(id, btn) {
+    const material = state.materials.find((item) => item.id === id);
+    if (!material) {
+      toast("That material could not be found.", "error");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete "${material.title}"?\n\nStudents will no longer be able to view or download it.`
+    );
+    if (!confirmed) return;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("is-loading");
+    }
+
+    try {
+      const { error } = await state.client
+        .from("materials")
+        .delete()
+        .eq("id", id)
+        .eq("teacher_id", state.user.id);
+
+      if (error) throw error;
+
+      try {
+        const { error: storageError } = await state.client.storage
+          .from(MATERIALS_BUCKET)
+          .remove([material.file_path]);
+        if (storageError) throw storageError;
+      } catch (storageErr) {
+        console.warn("[assignment-hub] could not remove material file:", storageErr);
+      }
+
+      state.materials = state.materials.filter((item) => item.id !== id);
+      renderMaterials();
+      toast("Class material deleted.");
+    } catch (err) {
+      console.error("[assignment-hub] delete material failed:", err);
       toast(friendlyError(err && err.message), "error");
       if (btn) {
         btn.disabled = false;
@@ -1382,7 +2042,7 @@
 
     el.refreshAll.addEventListener("click", async () => {
       el.refreshAll.classList.add("is-spinning");
-      await loadTeacher();
+      await Promise.all([loadTeacher(), loadMessages(), loadMaterials()]);
       window.setTimeout(() => el.refreshAll.classList.remove("is-spinning"), 300);
     });
 
@@ -1424,6 +2084,73 @@
         const downloadBtn = event.target.closest("[data-download]");
         if (downloadBtn) downloadSubmission(downloadBtn.dataset.download, downloadBtn);
       });
+    });
+
+    /* Messages */
+    el.messageForm.addEventListener("submit", handleSendMessage);
+    el.messageBody.addEventListener("input", () => clearFormNote(el.messageNote));
+
+    el.refreshSentMessages.addEventListener("click", async () => {
+      el.refreshSentMessages.classList.add("is-spinning");
+      await loadMessages();
+      window.setTimeout(() => el.refreshSentMessages.classList.remove("is-spinning"), 300);
+    });
+
+    el.refreshStudentMessages.addEventListener("click", async () => {
+      el.refreshStudentMessages.classList.add("is-spinning");
+      await loadMessages();
+      window.setTimeout(() => el.refreshStudentMessages.classList.remove("is-spinning"), 300);
+    });
+
+    el.studentMessageList.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-mark-message]");
+      if (btn) markMessageRead(btn.dataset.markMessage, btn);
+    });
+
+    el.teacherMessageList.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-delete-message-batch]");
+      if (btn) deleteMessageBatch(btn.dataset.deleteMessageBatch, btn);
+    });
+
+    /* Class materials */
+    el.materialForm.addEventListener("submit", handleMaterialUpload);
+    el.materialFile.addEventListener("change", handleMaterialFileChange);
+    el.materialTitle.addEventListener("input", () => clearFormNote(el.materialNote));
+
+    el.refreshStudentMaterials.addEventListener("click", async () => {
+      el.refreshStudentMaterials.classList.add("is-spinning");
+      await loadMaterials();
+      window.setTimeout(() => el.refreshStudentMaterials.classList.remove("is-spinning"), 300);
+    });
+
+    el.refreshTeacherMaterials.addEventListener("click", async () => {
+      el.refreshTeacherMaterials.classList.add("is-spinning");
+      await loadMaterials();
+      window.setTimeout(() => el.refreshTeacherMaterials.classList.remove("is-spinning"), 300);
+    });
+
+    [el.studentMaterialList, el.teacherMaterialList].forEach((list) => {
+      list.addEventListener("click", (event) => {
+        const viewBtn = event.target.closest("[data-material-view]");
+        if (viewBtn) {
+          viewMaterial(viewBtn.dataset.materialView, viewBtn);
+          return;
+        }
+
+        const downloadBtn = event.target.closest("[data-material-download]");
+        if (downloadBtn) {
+          downloadMaterial(downloadBtn.dataset.materialDownload, downloadBtn);
+          return;
+        }
+
+        const deleteBtn = event.target.closest("[data-material-delete]");
+        if (deleteBtn) deleteMaterial(deleteBtn.dataset.materialDelete, deleteBtn);
+      });
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible" || !state.user || !state.profile) return;
+      if (state.profile.role === "student") loadMessages();
     });
 
     el.fatalRetry.addEventListener("click", () => window.location.reload());

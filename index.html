@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#4f46e5" />
   <meta name="color-scheme" content="light" />
-  <meta name="description" content="A simple online assignment portal. Students upload their work with name and roll number; teachers review and download every submission in one place." />
+  <meta name="description" content="A simple online assignment portal. Students upload their work, receive teacher messages and download class materials; teachers review every submission in one place." />
   <meta name="robots" content="index, follow" />
   <title>Assignment Hub — Submit &amp; Review Class Assignments</title>
 
@@ -15,11 +15,11 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://0xgf-18.github.io/assignment-hub/" />
   <meta property="og:title" content="Assignment Hub" />
-  <meta property="og:description" content="Students submit assignments online. Teachers review every upload by name and roll number." />
+  <meta property="og:description" content="Students submit assignments, receive messages and download class materials. Teachers review every upload by name and roll number." />
   <meta property="og:image" content="https://0xgf-18.github.io/assignment-hub/icons/icon-512.png" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Assignment Hub" />
-  <meta name="twitter:description" content="Students submit assignments online. Teachers review every upload by name and roll number." />
+  <meta name="twitter:description" content="Students submit assignments, receive messages and download class materials. Teachers review every upload by name and roll number." />
 
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
 
@@ -236,8 +236,59 @@
         <div class="hero">
           <p class="eyebrow">Student portal</p>
           <h1>Hi, <span id="studentFirst">there</span></h1>
-          <p class="hero-sub">Upload your work below. It goes straight to your teacher with your name and roll number attached.</p>
+          <p class="hero-sub">Check messages and class materials, then upload your work. Everything goes straight to your teacher with your name and roll number attached.</p>
         </div>
+
+        <section class="card panel feature-panel" id="studentMessagesPanel">
+          <div class="card-head">
+            <div>
+              <h2>Messages <span class="count-pill" id="studentMsgCount">0</span> <span class="pill pill-new" id="studentUnreadPill" hidden>0 new</span></h2>
+              <p class="muted small">Personal messages and class announcements from your teacher.</p>
+            </div>
+            <button class="icon-btn" id="refreshStudentMessages" type="button" title="Refresh messages" aria-label="Refresh messages">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M20 4v4h-4M4 20v-4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="list" id="studentMessageList" aria-live="polite"></div>
+          <div class="empty" id="studentMessageEmpty" hidden>
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5v-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>No messages yet</h3>
+            <p>Messages from your teacher will appear here.</p>
+          </div>
+        </section>
+
+        <section class="card panel feature-panel" id="studentMaterialsPanel">
+          <div class="card-head">
+            <div>
+              <h2>Class materials <span class="count-pill" id="studentMaterialCount">0</span></h2>
+              <p class="muted small">Notes, PDFs and slides shared by your teacher.</p>
+            </div>
+            <button class="icon-btn" id="refreshStudentMaterials" type="button" title="Refresh materials" aria-label="Refresh class materials">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M20 4v4h-4M4 20v-4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="list" id="studentMaterialList" aria-live="polite"></div>
+          <div class="empty" id="studentMaterialEmpty" hidden>
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H14l6 6v8.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-12Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                <path d="M14 4v6h6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>No class materials yet</h3>
+            <p>Files shared by your teacher will appear here.</p>
+          </div>
+        </section>
 
         <section class="card upload-card">
           <div class="card-head">
@@ -319,8 +370,8 @@
       <section id="teacherView" class="view" hidden>
         <div class="hero">
           <p class="eyebrow">Teacher dashboard</p>
-          <h1>Student submissions</h1>
-          <p class="hero-sub">See every registered student and every upload — names, roll numbers and files ready to review.</p>
+          <h1>Class dashboard</h1>
+          <p class="hero-sub">Review every student and upload, message the class, and share notes or PDFs that everyone can download.</p>
         </div>
 
         <div class="stats">
@@ -354,6 +405,108 @@
             </div>
             <h3>No students yet</h3>
             <p>Students appear here as soon as they create an account — no upload needed.</p>
+          </div>
+        </section>
+
+        <section class="card panel feature-panel">
+          <div class="card-head">
+            <div>
+              <h2>Send a message</h2>
+              <p class="muted small">Send a private message to one student or an announcement to every student.</p>
+            </div>
+          </div>
+
+          <form id="messageForm" novalidate>
+            <div class="field">
+              <label for="messageRecipient">Send to</label>
+              <select id="messageRecipient" required>
+                <option value="all">All students</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="messageBody">Message</label>
+              <textarea id="messageBody" rows="3" maxlength="2000" placeholder="e.g. Bring your lab manual tomorrow." required></textarea>
+            </div>
+            <div class="upload-actions">
+              <button class="btn btn-primary" type="submit" id="sendMessageBtn">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="m3.5 11.5 16-7.5-5 16-3.7-6.3-7.3-2.2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                  <path d="m10.8 13.7 4.2-4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                <span>Send message</span>
+              </button>
+            </div>
+            <p class="form-note" id="messageNote" hidden></p>
+          </form>
+
+          <div class="section-head message-history-head">
+            <h2>Sent messages <span class="count-pill" id="sentMsgCount">0</span></h2>
+            <button class="icon-btn" id="refreshSentMessages" type="button" title="Refresh sent messages" aria-label="Refresh sent messages">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M20 4v4h-4M4 20v-4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="list" id="teacherMessageList" aria-live="polite"></div>
+          <div class="empty" id="teacherMessageEmpty" hidden>
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5v-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>No messages sent yet</h3>
+            <p>Your sent messages and read counts will appear here.</p>
+          </div>
+        </section>
+
+        <section class="card panel feature-panel">
+          <div class="card-head">
+            <div>
+              <h2>Class materials <span class="count-pill" id="teacherMaterialCount">0</span></h2>
+              <p class="muted small">Upload notes, PDFs or slides — every student can view and download them.</p>
+            </div>
+            <button class="icon-btn" id="refreshTeacherMaterials" type="button" title="Refresh materials" aria-label="Refresh class materials">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M20 11a8 8 0 0 0-14.9-3M4 13a8 8 0 0 0 14.9 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M20 4v4h-4M4 20v-4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <form id="materialForm" novalidate>
+            <div class="field">
+              <label for="materialTitle">Material title</label>
+              <input id="materialTitle" type="text" maxlength="120" placeholder="e.g. Chapter 4 — class notes" required />
+            </div>
+            <div class="field">
+              <label for="materialFile">File</label>
+              <input class="file-input" id="materialFile" type="file" required />
+              <p class="field-hint" id="materialFileHint">PDF, Word, slides, images — up to 25 MB.</p>
+            </div>
+            <div class="upload-actions">
+              <button class="btn btn-primary" type="submit" id="materialUploadBtn">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 16V4m0 0L8 8m4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                <span>Upload material</span>
+              </button>
+              <div class="progress" id="materialProgress" hidden><span></span></div>
+            </div>
+            <p class="form-note" id="materialNote" hidden></p>
+          </form>
+
+          <div class="list material-list" id="teacherMaterialList" aria-live="polite"></div>
+          <div class="empty" id="teacherMaterialEmpty" hidden>
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H14l6 6v8.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-12Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                <path d="M14 4v6h6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>No class materials yet</h3>
+            <p>Upload a PDF or other file to share it with every student.</p>
           </div>
         </section>
 

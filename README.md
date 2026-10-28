@@ -14,10 +14,12 @@ No app install, no build step. Open the link in any phone or computer browser.
 | Log in with roll number + password | Log in with email + password after the admin activates it |
 | Upload a file with an assignment title | See every registered student — even before they upload — plus every submission |
 | See their own past submissions, view or delete them | Search by name, roll number, or title |
-| Private: students can only see their own files | View or download any student's file |
-|  | Remove a student permanently: account, submissions and files are deleted |
+| Receive private messages and class announcements, with an unread badge | Message one student or every student; see read counts |
+| View and download class materials shared by the teacher | Upload PDFs, notes or slides for the whole class; delete materials |
+| Private: students can only see their own assignment files | View or download any student's file |
+|  | Remove a student permanently: account, submissions, messages and files are deleted |
 
-Files are stored in a **private** Supabase bucket. Students cannot see each other's work.
+Assignment files are stored in a **private** Supabase bucket. Students cannot see each other's work. Class materials are stored in a separate private bucket that every signed-in student may read.
 
 ---
 
@@ -136,7 +138,7 @@ set role = 'teacher',
 where email = 'teacher@example.com';
 ```
 
-5. Ask the teacher to log in again via **Teacher → Log in** with their email and password. The dashboard now shows **Student submissions**.
+5. Ask the teacher to log in again via **Teacher → Log in** with their email and password. The **Class dashboard** now shows the roster, messages, class materials and submissions.
 
 To list accounts that signed up with a real email but are still students (likely teacher requests):
 
@@ -170,8 +172,10 @@ order by role, full_name;
 2. They log in with **roll number + password**, enter an assignment title, choose a file, and tap **Upload assignment** → the file goes to the private `assignments` bucket under their user id, and a row is added to `submissions`.
 3. A student can **view** or **delete** only their own uploads. Deleting removes the database row and the stored file.
 4. The teacher requests an account, the admin promotes it, then the teacher logs in with **email + password** → sees the full class roster (including students with no uploads) and every submission, newest first, with student name + roll number → searches, views or downloads any file.
-5. The teacher can permanently remove a student with the trash button. The app deletes the student's stored files, then calls a teacher-only database function that deletes the auth account; the profile and submissions cascade automatically.
-6. All file links are **signed URLs** that expire quickly, so files can’t be shared publicly.
+5. The teacher can send a **private message** to one student or an **announcement to every current student**. Announcements create one message row per recipient, so each student has their own read state; the teacher sees a grouped sent list with read counts. Students get an unread badge and an in-app toast on login, when they return to the tab, and within 45 seconds while the page is open.
+6. The teacher can upload a PDF, document, slide deck or image to **Class materials**. Every student can view or download it; only the teacher can upload or delete materials.
+7. The teacher can permanently remove a student with the trash button. The app deletes the student's stored files, then calls a teacher-only database function that deletes the auth account; the profile, submissions and messages cascade automatically.
+8. All file links are **signed URLs** that expire quickly, so files can’t be shared publicly.
 
 Permissions are enforced by Supabase **Row Level Security** (RLS) from `schema.sql`, not by the website code. Even someone who reads the JavaScript cannot list other students’ files.
 
@@ -196,15 +200,34 @@ delete from public.submissions where id = 'PASTE-SUBMISSION-ID';
 
 The file itself stays in Storage. To remove it too, go to **Storage → assignments**, open the student's folder, and delete the matching file.
 
+List sent messages and read status:
+
+```sql
+select m.created_at, p.full_name as recipient, m.audience, m.body, m.read_at
+from public.messages m
+join public.profiles p on p.id = m.recipient_id
+order by m.created_at desc;
+```
+
+List class materials:
+
+```sql
+select title, file_name, file_size, created_at
+from public.materials
+order by created_at desc;
+```
+
 Clear all test data:
 
 ```sql
+delete from public.messages;
+delete from public.materials;
 delete from public.submissions;
 ```
 
-Then **Storage → assignments** → select files → **Delete**.
+Then **Storage → assignments** → select files → **Delete**, and **Storage → materials** → select files → **Delete**.
 
-To remove a student manually, use **Authentication → Users → Delete user** and then delete their folder under **Storage → assignments**. The student-facing **Remove** button does both steps automatically and also removes their submissions.
+To remove a student manually, use **Authentication → Users → Delete user** and then delete their folder under **Storage → assignments**. The teacher's **Remove** button does both steps automatically and also removes their submissions and messages. Teacher-uploaded class materials belong to the teacher account, not the student, and are not deleted when a student is removed.
 
 Export a CSV: run the “List all submissions” query in the SQL Editor, then use the **Download CSV** option.
 
@@ -222,6 +245,9 @@ Export a CSV: run the “List all submissions” query in the SQL Editor, then u
 | “Email not confirmed” | Confirm the email, or turn **Confirm email OFF** in Supabase → Authentication → Email. For students this must be OFF, because their internal address is not a real inbox. |
 | “Supabase blocked this action” / RLS error | `supabase/schema.sql` was not run in full, or was run in the wrong project. Re-run it. |
 | “The 'assignments' storage bucket is missing” | Re-run `schema.sql` (it creates the bucket and policies). |
+| Messages or class materials don't appear | Re-run `schema.sql` to create the `messages`, `materials` and `materials` storage policies, then hard-refresh. |
+| “Only teachers can…” or a message fails to send | The account is not a teacher, or the student was removed from the roster. Refresh the dashboard. |
+| Student can't see a class material | Confirm the `materials` bucket exists and the “materials: everyone reads files” storage policy is present. Re-run `schema.sql`. |
 | Uploads fail only for big files | The app limit is 25 MB. Supabase also has a project upload limit (default 50 MB) under **Storage → Settings**. |
 | Teacher still sees the student view | Run the promotion SQL in section 4, then log out and log back in. Choosing **Teacher** on the website does not grant access. |
 | Confirmation link opens `localhost` | Set **Site URL** in Supabase → Authentication → URL Configuration to your GitHub Pages address. |
@@ -236,9 +262,11 @@ Export a CSV: run the “List all submissions” query in the SQL Editor, then u
 - `config.js` contains the **anon/publishable** key. That is designed to be public. Security comes from RLS policies.
 - **Never** put the `service_role` key in the website, GitHub, or chat.
 - Students can read, view and delete only their own submissions and files.
+- Students can read only messages addressed to them, and can update only the `read_at` field on those messages. A student cannot insert a message or read another student's message.
 - Teachers can read all submissions and view or download all files because of `public.is_teacher()`.
+- Class materials are readable by every authenticated user and can be inserted or deleted only by a teacher, inside that teacher's own storage folder.
 - Teachers can remove a student through the roster. The database function `delete_student_account` re-checks the teacher role and refuses to delete teachers, pending teacher requests, or the caller's own account.
-- Removing a student is a **hard delete**: auth account, profile, submissions and stored files. The same roll number can create a new account later; removal is not a permanent ban.
+- Removing a student is a **hard delete**: auth account, profile, submissions, messages and stored assignment files. The same roll number can create a new account later; removal is not a permanent ban.
 - Choosing **Teacher** at sign-up only sends a request: the database trigger always creates new accounts as `student`. Only your SQL can promote a teacher.
 - Student roll numbers are converted into internal email identifiers for Supabase Auth. They are not real inboxes and are never shown to other students.
 - Only you can promote a teacher — by running SQL in Supabase. The website cannot change roles.
