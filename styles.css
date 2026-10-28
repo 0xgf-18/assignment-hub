@@ -896,28 +896,36 @@ input::-ms-clear { display: none; }
   background: linear-gradient(180deg, #6366f1, #8b5cf6);
 }
 
-.account-grid {
+.account-facts {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
 }
 
-.account-form { display: flex; flex-direction: column; min-width: 0; }
-
-.account-form h3 { font-size: 0.95rem; letter-spacing: -0.015em; }
-
-.account-form > .muted { margin: 4px 0 14px; }
-
-.account-form .field { margin-bottom: 14px; }
-
-.account-form .btn { margin-top: 2px; }
-
-.account-form + .account-form {
-  padding-left: 24px;
-  border-left: 1px solid var(--line);
+.account-facts > div {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #f8f9fd;
 }
 
-.account-form .form-note { margin-top: 10px; }
+.account-facts dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.account-facts dd {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
 
 .pill-new {
   height: 24px;
@@ -1186,13 +1194,7 @@ input::-ms-clear { display: none; }
   .roster-item .icon-btn.subtle { width: 40px; height: 40px; }
   .feature-panel { padding: 16px; }
   .account-panel { padding: 18px 18px 18px 22px; }
-  .account-grid { grid-template-columns: 1fr; gap: 22px; }
-  .account-form + .account-form {
-    padding-top: 22px;
-    padding-left: 0;
-    border-top: 1px solid var(--line);
-    border-left: 0;
-  }
+  .account-facts { grid-template-columns: 1fr; }
   .message-badge { width: 38px; height: 38px; }
   .material-item .file-badge { display: none; }
   .auth-brand h1 { font-size: 1.45rem; }

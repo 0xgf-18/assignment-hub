@@ -330,68 +330,20 @@
           <div class="card-head">
             <div>
               <h2>My account</h2>
-              <p class="muted small">Change the name your teacher sees or set a new password.</p>
+              <p class="muted small">Your student details. Ask your teacher to change your name or password.</p>
             </div>
           </div>
 
-          <div class="account-grid">
-            <form id="nameForm" class="account-form" novalidate>
-              <h3>Display name</h3>
-              <p class="muted small">This name appears on your submissions and in your teacher’s roster.</p>
-              <div class="field">
-                <label for="accountName">Full name</label>
-                <input id="accountName" type="text" autocomplete="name" placeholder="e.g. Ayesha Khan" maxlength="80" required />
-              </div>
-              <button class="btn btn-primary btn-block" type="submit" id="updateNameBtn"><span>Save name</span></button>
-              <p class="form-note" id="nameNote" hidden></p>
-            </form>
-
-            <form id="passwordForm" class="account-form" novalidate>
-              <h3>Change password</h3>
-              <p class="muted small">Confirm your current password, then choose a new one.</p>
-              <div class="field">
-                <label for="accountCurrentPassword">Current password</label>
-                <div class="password-field">
-                  <input id="accountCurrentPassword" type="password" autocomplete="current-password" placeholder="Your current password" required />
-                  <button class="password-toggle" type="button" data-password-toggle="accountCurrentPassword" aria-controls="accountCurrentPassword" aria-label="Show password" aria-pressed="false" title="Show password">
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
-                    </svg>
-                    <span class="password-toggle-text">Show</span>
-                  </button>
-                </div>
-              </div>
-              <div class="field">
-                <label for="accountNewPassword">New password</label>
-                <div class="password-field">
-                  <input id="accountNewPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
-                  <button class="password-toggle" type="button" data-password-toggle="accountNewPassword" aria-controls="accountNewPassword" aria-label="Show password" aria-pressed="false" title="Show password">
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
-                    </svg>
-                    <span class="password-toggle-text">Show</span>
-                  </button>
-                </div>
-              </div>
-              <div class="field">
-                <label for="accountConfirmPassword">Confirm new password</label>
-                <div class="password-field">
-                  <input id="accountConfirmPassword" type="password" autocomplete="new-password" placeholder="Repeat new password" minlength="6" required />
-                  <button class="password-toggle" type="button" data-password-toggle="accountConfirmPassword" aria-controls="accountConfirmPassword" aria-label="Show password" aria-pressed="false" title="Show password">
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
-                    </svg>
-                    <span class="password-toggle-text">Show</span>
-                  </button>
-                </div>
-              </div>
-              <button class="btn btn-primary btn-block" type="submit" id="updatePasswordBtn"><span>Update password</span></button>
-              <p class="form-note" id="passwordNote" hidden></p>
-            </form>
-          </div>
+          <dl class="account-facts">
+            <div>
+              <dt>Full name</dt>
+              <dd id="accountFullName">—</dd>
+            </div>
+            <div>
+              <dt>Roll number</dt>
+              <dd id="accountRollNumber">—</dd>
+            </div>
+          </dl>
         </section>
 
         <section class="card upload-card">

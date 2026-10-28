@@ -12,7 +12,7 @@ No app install, no build step. Open the link in any phone or computer browser.
 | --- | --- |
 | Sign up with full name + roll number + password — **no email needed** | Request a teacher account with email + password |
 | Log in with roll number + password | Log in with email + password after the admin activates it |
-| Update their display name or password from **My account** | See every registered student — even before they upload — plus every submission |
+| See their account details in **My account** | See every registered student — even before they upload — plus every submission |
 | Upload a file with an assignment title | Search by name, roll number, or title |
 | See their own past submissions, view or delete them | Message one student or the whole class, with read counts |
 | Receive private messages and class announcements, with an unread badge | Upload PDFs, notes or slides for the whole class; delete materials |
@@ -171,7 +171,7 @@ order by role, full_name;
 1. A student signs up → the app turns their roll number into a private internal email (never shown) and creates a row in `profiles` with their name and roll number (role `student`).
 2. They log in with **roll number + password**, enter an assignment title, choose a file, and tap **Upload assignment** → the file goes to the private `assignments` bucket under their user id, and a row is added to `submissions`.
 3. A student can **view** or **delete** only their own uploads. Deleting removes the database row and the stored file.
-4. From **My account**, a student can update the display name shown to the teacher or change their password. Changing a password requires the current password and signs the student in again first.
+4. The **My account** panel shows the student's name and roll number. Students cannot edit their profile or change their password from the website; those details are managed by the teacher/admin.
 5. The teacher requests an account, the admin promotes it, then the teacher logs in with **email + password** → sees the full class roster (including students with no uploads) and every submission, newest first, with student name + roll number → searches, views or downloads any file.
 6. The teacher can send a **private message** to one student or an **announcement to every current student**. Announcements create one message row per recipient, so each student has their own read state; the teacher sees a grouped sent list with read counts. Students get an unread badge and an in-app toast on login, when they return to the tab, and within 45 seconds while the page is open.
 7. The teacher can upload a PDF, document, slide deck or image to **Class materials**. Every student can view or download it; only the teacher can upload or delete materials.
@@ -245,7 +245,6 @@ Export a CSV: run the “List all submissions” query in the SQL Editor, then u
 | “This account is waiting for admin activation” | The teacher request exists but is still a student. Run the promotion SQL in section 4, then log in again. |
 | “Email not confirmed” | Confirm the email, or turn **Confirm email OFF** in Supabase → Authentication → Email. For students this must be OFF, because their internal address is not a real inbox. |
 | “Supabase blocked this action” / RLS error | `supabase/schema.sql` was not run in full, or was run in the wrong project. Re-run it. |
-| Name or password won't update | Re-run `schema.sql` so the “profiles: update own name” policy and `update (full_name)` grant exist. Password changes also require the current password. |
 | “The 'assignments' storage bucket is missing” | Re-run `schema.sql` (it creates the bucket and policies). |
 | Messages or class materials don't appear | Re-run `schema.sql` to create the `messages`, `materials` and `materials` storage policies, then hard-refresh. |
 | “Only teachers can…” or a message fails to send | The account is not a teacher, or the student was removed from the roster. Refresh the dashboard. |
@@ -264,7 +263,7 @@ Export a CSV: run the “List all submissions” query in the SQL Editor, then u
 - `config.js` contains the **anon/publishable** key. That is designed to be public. Security comes from RLS policies.
 - **Never** put the `service_role` key in the website, GitHub, or chat.
 - Students can read, view and delete only their own submissions and files.
-- Students can update only the `full_name` column on their own profile. A column-level grant plus RLS blocks changes to `role`, `roll_number` and `email`. Changing a password requires the current password first.
+- Students cannot update their own profile. Names, roll numbers, roles and passwords are managed by the teacher/admin; the website only reads profile details.
 - Students can read only messages addressed to them, and can update only the `read_at` field on those messages. A student cannot insert a message or read another student's message.
 - Teachers can read all submissions and view or download all files because of `public.is_teacher()`.
 - Class materials are readable by every authenticated user and can be inserted or deleted only by a teacher, inside that teacher's own storage folder.
