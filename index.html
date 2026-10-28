@@ -320,7 +320,7 @@
         <div class="hero">
           <p class="eyebrow">Teacher dashboard</p>
           <h1>Student submissions</h1>
-          <p class="hero-sub">Every upload appears with the student's name, roll number and file — ready to review.</p>
+          <p class="hero-sub">See every registered student and every upload — names, roll numbers and files ready to review.</p>
         </div>
 
         <div class="stats">
@@ -338,7 +338,26 @@
           </div>
         </div>
 
-        <section class="card panel">
+        <section class="card panel roster-panel">
+          <div class="card-head roster-head">
+            <div>
+              <h2>Class roster <span class="count-pill" id="rosterCount">0</span></h2>
+              <p class="muted small">Every registered student, including those who haven't uploaded yet. Use the trash button to permanently remove an account.</p>
+            </div>
+          </div>
+          <div class="roster-grid" id="rosterList" aria-live="polite"></div>
+          <div class="empty" id="rosterEmpty" hidden>
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM20 20v-1.5a3.5 3.5 0 0 0-2.6-3.4M15.5 4.1a3.5 3.5 0 0 1 0 6.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>No students yet</h3>
+            <p>Students appear here as soon as they create an account — no upload needed.</p>
+          </div>
+        </section>
+
+        <section class="card panel" id="submissionsPanel">
           <div class="toolbar">
             <div class="search-wrap">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">

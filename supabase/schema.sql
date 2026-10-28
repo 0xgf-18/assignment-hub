@@ -185,7 +185,49 @@ create policy "assignments: teachers delete files"
   using (bucket_id = 'assignments' and public.is_teacher());
 
 -- ------------------------------------------------------------
--- 5. Promote a teacher (run manually, replace the email)
+-- 5. Remove a student (teacher-only)
+--    Deletes the student's auth account; profiles, submissions and
+--    stored files are removed by the app before this runs.
+-- ------------------------------------------------------------
+create or replace function public.delete_student_account(target_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_role text;
+  target_roll text;
+begin
+  if not public.is_teacher() then
+    raise exception 'Only teachers can remove students.' using errcode = '42501';
+  end if;
+
+  if target_id = auth.uid() then
+    raise exception 'You cannot remove your own account.' using errcode = '42501';
+  end if;
+
+  select role, roll_number into target_role, target_roll
+  from public.profiles
+  where id = target_id;
+
+  if target_role is null then
+    raise exception 'Student not found.' using errcode = 'P0002';
+  end if;
+
+  if target_role <> 'student' or target_roll is null then
+    raise exception 'Only student accounts can be removed.' using errcode = '42501';
+  end if;
+
+  delete from auth.users where id = target_id;
+end;
+$$;
+
+revoke all on function public.delete_student_account(uuid) from public;
+grant execute on function public.delete_student_account(uuid) to authenticated;
+
+-- ------------------------------------------------------------
+-- 6. Promote a teacher (run manually, replace the email)
 -- ------------------------------------------------------------
 -- update public.profiles
 -- set role = 'teacher', full_name = 'Teacher Name'

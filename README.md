@@ -12,9 +12,10 @@ No app install, no build step. Open the link in any phone or computer browser.
 | --- | --- |
 | Sign up with full name + roll number + password — **no email needed** | Request a teacher account with email + password |
 | Log in with roll number + password | Log in with email + password after the admin activates it |
-| Upload a file with an assignment title | See every submission: student name, roll number, title, file, date |
+| Upload a file with an assignment title | See every registered student — even before they upload — plus every submission |
 | See their own past submissions, view or delete them | Search by name, roll number, or title |
-| Private: students can only see their own files | Download any student's file with one click |
+| Private: students can only see their own files | View or download any student's file |
+|  | Remove a student permanently: account, submissions and files are deleted |
 
 Files are stored in a **private** Supabase bucket. Students cannot see each other's work.
 
@@ -168,8 +169,9 @@ order by role, full_name;
 1. A student signs up → the app turns their roll number into a private internal email (never shown) and creates a row in `profiles` with their name and roll number (role `student`).
 2. They log in with **roll number + password**, enter an assignment title, choose a file, and tap **Upload assignment** → the file goes to the private `assignments` bucket under their user id, and a row is added to `submissions`.
 3. A student can **view** or **delete** only their own uploads. Deleting removes the database row and the stored file.
-4. The teacher requests an account, the admin promotes it, then the teacher logs in with **email + password** → sees every submission, newest first, with student name + roll number → searches or downloads.
-5. All file links are **signed URLs** that expire quickly, so files can’t be shared publicly.
+4. The teacher requests an account, the admin promotes it, then the teacher logs in with **email + password** → sees the full class roster (including students with no uploads) and every submission, newest first, with student name + roll number → searches, views or downloads any file.
+5. The teacher can permanently remove a student with the trash button. The app deletes the student's stored files, then calls a teacher-only database function that deletes the auth account; the profile and submissions cascade automatically.
+6. All file links are **signed URLs** that expire quickly, so files can’t be shared publicly.
 
 Permissions are enforced by Supabase **Row Level Security** (RLS) from `schema.sql`, not by the website code. Even someone who reads the JavaScript cannot list other students’ files.
 
@@ -202,6 +204,8 @@ delete from public.submissions;
 
 Then **Storage → assignments** → select files → **Delete**.
 
+To remove a student manually, use **Authentication → Users → Delete user** and then delete their folder under **Storage → assignments**. The student-facing **Remove** button does both steps automatically and also removes their submissions.
+
 Export a CSV: run the “List all submissions” query in the SQL Editor, then use the **Download CSV** option.
 
 ---
@@ -232,7 +236,9 @@ Export a CSV: run the “List all submissions” query in the SQL Editor, then u
 - `config.js` contains the **anon/publishable** key. That is designed to be public. Security comes from RLS policies.
 - **Never** put the `service_role` key in the website, GitHub, or chat.
 - Students can read, view and delete only their own submissions and files.
-- Teachers can read all submissions and download all files because of `public.is_teacher()`.
+- Teachers can read all submissions and view or download all files because of `public.is_teacher()`.
+- Teachers can remove a student through the roster. The database function `delete_student_account` re-checks the teacher role and refuses to delete teachers, pending teacher requests, or the caller's own account.
+- Removing a student is a **hard delete**: auth account, profile, submissions and stored files. The same roll number can create a new account later; removal is not a permanent ban.
 - Choosing **Teacher** at sign-up only sends a request: the database trigger always creates new accounts as `student`. Only your SQL can promote a teacher.
 - Student roll numbers are converted into internal email identifiers for Supabase Auth. They are not real inboxes and are never shown to other students.
 - Only you can promote a teacher — by running SQL in Supabase. The website cannot change roles.

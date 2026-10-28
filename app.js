@@ -29,6 +29,7 @@
     file: null,
     mine: [],
     rows: [],
+    students: [],
     query: "",
     entering: false,
   };
@@ -105,6 +106,10 @@
     teacherEmpty: $("teacherEmpty"),
     teacherEmptyTitle: $("teacherEmptyTitle"),
     teacherEmptyText: $("teacherEmptyText"),
+    rosterCount: $("rosterCount"),
+    rosterList: $("rosterList"),
+    rosterEmpty: $("rosterEmpty"),
+    submissionsPanel: $("submissionsPanel"),
 
     toasts: $("toasts"),
   };
@@ -862,6 +867,15 @@
     </button>`;
   }
 
+  function teacherActions(id) {
+    return `<div class="row-actions">
+      <button class="btn-soft" type="button" data-view="${escapeHtml(id)}" aria-label="View file">
+        ${ICON_EYE}<span>View</span>
+      </button>
+      ${downloadButton(id)}
+    </div>`;
+  }
+
   function studentActions(id) {
     return `<div class="row-actions">
       <button class="btn-soft" type="button" data-view="${escapeHtml(id)}" aria-label="View file">
@@ -940,14 +954,155 @@
           <time datetime="${escapeHtml(row.created_at)}" title="${escapeHtml(fullDate(row.created_at))}">${escapeHtml(timeAgo(row.created_at))}</time>
         </p>
       </div>
-      ${downloadButton(row.id)}
+      ${teacherActions(row.id)}
     </article>`;
+  }
+
+  function rosterRow(student, stats) {
+    const name = student.full_name || "Unknown student";
+    const roll = student.roll_number || "—";
+    const count = stats ? stats.count : 0;
+    const meta = count
+      ? `${count} submission${count === 1 ? "" : "s"} · Last ${timeAgo(stats.latest)}`
+      : "No uploads yet";
+
+    return `<article class="sub-item roster-item">
+      <span class="avatar sm" style="${avatarStyle(name)}" aria-hidden="true">${escapeHtml(initials(name))}</span>
+      <div class="sub-main">
+        <div class="student-line">
+          <h3 title="${escapeHtml(name)}">${escapeHtml(name)}</h3>
+          <span class="roll-pill">Roll ${escapeHtml(roll)}</span>
+        </div>
+        <p class="sub-meta">${escapeHtml(meta)}</p>
+      </div>
+      <div class="roster-actions">
+        ${count ? `<button class="btn-soft" type="button" data-roster-filter="${escapeHtml(student.roll_number || name)}" aria-label="View ${escapeHtml(name)}'s work">${ICON_EYE}<span>View work</span></button>` : ""}
+        <button class="icon-btn subtle danger" type="button" data-remove-student="${escapeHtml(student.id)}" aria-label="Remove ${escapeHtml(name)}" title="Remove this student account">
+          ${ICON_TRASH}
+        </button>
+      </div>
+    </article>`;
+  }
+
+  function renderRoster() {
+    el.rosterCount.textContent = String(state.students.length);
+
+    if (!state.students.length) {
+      el.rosterList.innerHTML = "";
+      el.rosterList.hidden = true;
+      el.rosterEmpty.hidden = false;
+      return;
+    }
+
+    const stats = new Map();
+    for (const row of state.rows) {
+      const current = stats.get(row.student_id) || { count: 0, latest: row.created_at };
+      current.count += 1;
+      if (new Date(row.created_at) > new Date(current.latest)) current.latest = row.created_at;
+      stats.set(row.student_id, current);
+    }
+
+    el.rosterList.innerHTML = state.students.map((student) => rosterRow(student, stats.get(student.id))).join("");
+    el.rosterList.hidden = false;
+    el.rosterEmpty.hidden = true;
+  }
+
+  async function loadRoster() {
+    try {
+      const { data, error } = await state.client
+        .from("profiles")
+        .select("id, full_name, roll_number, created_at")
+        .eq("role", "student")
+        .not("roll_number", "is", null)
+        .order("full_name", { ascending: true });
+
+      if (error) throw error;
+      state.students = (data || []).filter((student) => student.roll_number);
+    } catch (err) {
+      console.error("[assignment-hub] roster load failed:", err);
+      state.students = [];
+      el.rosterCount.textContent = "0";
+      el.rosterList.innerHTML = `<div class="alert alert-error">${escapeHtml(friendlyError(err && err.message))}</div>`;
+      el.rosterList.hidden = false;
+      el.rosterEmpty.hidden = true;
+      return;
+    }
+
+    renderRoster();
+  }
+
+  async function removeStudent(id, btn) {
+    const student = state.students.find((item) => item.id === id);
+    if (!student) {
+      toast("That student could not be found.", "error");
+      return;
+    }
+
+    const name = student.full_name || "this student";
+    const roll = student.roll_number ? ` (Roll ${student.roll_number})` : "";
+    const confirmed = window.confirm(
+      `Remove "${name}"${roll} permanently?\n\nThis deletes the student's account, all their submissions, and every uploaded file. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add("is-loading");
+    }
+
+    try {
+      // Remove storage first, while the teacher still has access to the folder.
+      const folder = student.id;
+      const { data: files, error: listError } = await state.client
+        .storage
+        .from(BUCKET)
+        .list(folder, { limit: 1000 });
+      if (listError) throw listError;
+
+      const paths = (files || [])
+        .filter((file) => file && file.name)
+        .map((file) => `${folder}/${file.name}`);
+
+      if (paths.length) {
+        const { error: removeError } = await state.client.storage.from(BUCKET).remove(paths);
+        if (removeError) throw removeError;
+      }
+
+      // The database function verifies the caller is a teacher, then deletes
+      // the auth user. Profiles, submissions and sessions cascade automatically.
+      const { error } = await state.client.rpc("delete_student_account", { target_id: folder });
+      if (error) throw error;
+
+      state.students = state.students.filter((item) => item.id !== id);
+      state.rows = state.rows.filter((row) => row.student_id !== id);
+
+      const query = state.query.trim().toLowerCase();
+      if (query && (query === String(student.roll_number || "").toLowerCase() || query === name.toLowerCase())) {
+        state.query = "";
+        el.teacherSearch.value = "";
+      }
+
+      updateStats();
+      renderRoster();
+      renderTeacher();
+      toast("Student account removed.");
+    } catch (err) {
+      console.error("[assignment-hub] remove student failed:", err);
+      toast(friendlyError(err && err.message), "error");
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove("is-loading");
+      }
+    }
   }
 
   async function loadTeacher() {
     el.teacherList.innerHTML = skeletonList(3);
     el.teacherList.hidden = false;
     el.teacherEmpty.hidden = true;
+    el.rosterList.innerHTML = skeletonList(2);
+    el.rosterList.hidden = false;
+    el.rosterEmpty.hidden = true;
 
     const withJoin =
       "id, student_id, assignment_title, file_path, file_name, file_size, created_at, student:profiles!submissions_student_id_fkey(full_name, roll_number)";
@@ -985,18 +1140,22 @@
       }
 
       state.rows = data || [];
+      await loadRoster();
       updateStats();
       renderTeacher();
     } catch (err) {
       console.error("[assignment-hub] teacher load failed:", err);
+      state.rows = [];
       el.teacherList.innerHTML = `<div class="alert alert-error">${escapeHtml(friendlyError(err && err.message))}</div>`;
+      await loadRoster();
       updateStats();
     }
   }
 
   function updateStats() {
+    const uploadedStudents = new Set(state.rows.map((r) => r.student_id)).size;
     el.statTotal.textContent = String(state.rows.length);
-    el.statStudents.textContent = String(new Set(state.rows.map((r) => r.student_id)).size);
+    el.statStudents.textContent = String(state.students.length || uploadedStudents);
 
     if (state.rows.length) {
       el.statLatest.textContent = timeAgo(state.rows[0].created_at);
@@ -1039,7 +1198,7 @@
   /* ---------- Downloads ---------- */
 
   async function viewSubmission(id, btn) {
-    const submission = state.mine.find((s) => s.id === id);
+    const submission = state.mine.find((s) => s.id === id) || state.rows.find((s) => s.id === id);
     if (!submission) {
       toast("That file could not be found.", "error");
       return;
@@ -1230,6 +1389,22 @@
     el.teacherSearch.addEventListener("input", () => {
       state.query = el.teacherSearch.value;
       renderTeacher();
+    });
+
+    el.rosterList.addEventListener("click", (event) => {
+      const removeBtn = event.target.closest("[data-remove-student]");
+      if (removeBtn) {
+        removeStudent(removeBtn.dataset.removeStudent, removeBtn);
+        return;
+      }
+
+      const btn = event.target.closest("[data-roster-filter]");
+      if (!btn) return;
+      const query = btn.dataset.rosterFilter || "";
+      el.teacherSearch.value = query;
+      state.query = query;
+      renderTeacher();
+      el.submissionsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     [el.myList, el.teacherList].forEach((list) => {
