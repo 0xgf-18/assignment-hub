@@ -16,6 +16,22 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
+-- Keep display names reasonable even if someone bypasses the website form.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'profiles_full_name_length'
+      and conrelid = 'public.profiles'::regclass
+  ) then
+    alter table public.profiles
+      add constraint profiles_full_name_length
+      check (char_length(btrim(full_name)) between 1 and 80);
+  end if;
+end
+$$;
+
 alter table public.profiles enable row level security;
 
 -- Helper: is the current user a teacher?
@@ -49,12 +65,20 @@ create policy "profiles: teachers read all"
   to authenticated
   using (public.is_teacher());
 
--- No client-side insert/update/delete policies:
--- profiles are created by the trigger below and roles are changed
--- only by you (the admin) in the SQL editor. This prevents students
--- from promoting themselves to teacher.
+-- Students may change only their own display name after logging in.
+-- The column-level grant below makes role, roll number and email
+-- read-only for browser clients. Profiles are still created by the
+-- trigger below, and roles are changed only by you in the SQL editor.
+drop policy if exists "profiles: update own name" on public.profiles;
+create policy "profiles: update own name"
+  on public.profiles for update
+  to authenticated
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
 
+revoke insert, update, delete, truncate, references, trigger on public.profiles from anon, authenticated;
 grant select on public.profiles to authenticated;
+grant update (full_name) on public.profiles to authenticated;
 
 -- ------------------------------------------------------------
 -- 2. Auto-create a profile after signup

@@ -110,6 +110,17 @@
     refreshStudentMaterials: $("refreshStudentMaterials"),
     studentMaterialList: $("studentMaterialList"),
     studentMaterialEmpty: $("studentMaterialEmpty"),
+    studentAccountPanel: $("studentAccountPanel"),
+    nameForm: $("nameForm"),
+    accountName: $("accountName"),
+    updateNameBtn: $("updateNameBtn"),
+    nameNote: $("nameNote"),
+    passwordForm: $("passwordForm"),
+    accountCurrentPassword: $("accountCurrentPassword"),
+    accountNewPassword: $("accountNewPassword"),
+    accountConfirmPassword: $("accountConfirmPassword"),
+    updatePasswordBtn: $("updatePasswordBtn"),
+    passwordNote: $("passwordNote"),
 
     teacherView: $("teacherView"),
     statTotal: $("statTotal"),
@@ -339,6 +350,7 @@
       btn.setAttribute("aria-selected", String(active));
     });
     renderAuthForms();
+    resetPasswordVisibility(el.authView);
     hideAlerts();
   }
 
@@ -350,6 +362,7 @@
       btn.setAttribute("aria-selected", String(active));
     });
     renderAuthForms();
+    resetPasswordVisibility(el.authView);
     hideAlerts();
   }
 
@@ -388,6 +401,40 @@
       btn.disabled = false;
       const target = btn.querySelector("span") || btn;
       target.textContent = btn.dataset.idleLabel || target.textContent;
+    }
+  }
+
+  function setPasswordVisibility(button, input, visible) {
+    if (!button || !input) return;
+    input.type = visible ? "text" : "password";
+    button.setAttribute("aria-pressed", String(visible));
+    button.setAttribute("aria-label", visible ? "Hide password" : "Show password");
+    button.title = visible ? "Hide password" : "Show password";
+    const label = button.querySelector(".password-toggle-text");
+    if (label) label.textContent = visible ? "Hide" : "Show";
+  }
+
+  function resetPasswordVisibility(root) {
+    const scope = root || document;
+    scope.querySelectorAll("[data-password-toggle]").forEach((button) => {
+      const input = document.getElementById(button.dataset.passwordToggle);
+      setPasswordVisibility(button, input, false);
+    });
+  }
+
+  function handlePasswordToggle(event) {
+    const button = event.target.closest("[data-password-toggle]");
+    if (!button) return;
+    const input = document.getElementById(button.dataset.passwordToggle);
+    if (!input || input.disabled) return;
+
+    const show = input.type === "password";
+    setPasswordVisibility(button, input, show);
+    input.focus({ preventScroll: true });
+    try {
+      input.setSelectionRange(input.value.length, input.value.length);
+    } catch (err) {
+      // Some mobile browsers do not expose selection methods on password inputs.
     }
   }
 
@@ -784,6 +831,141 @@
       ? `Roll ${state.profile.roll_number}`
       : "Roll —";
     resetUploadForm();
+    renderAccountForm();
+  }
+
+  function renderAccountForm() {
+    if (!state.profile) return;
+    el.accountName.value = state.profile.full_name || "";
+    el.accountCurrentPassword.value = "";
+    el.accountNewPassword.value = "";
+    el.accountConfirmPassword.value = "";
+    resetPasswordVisibility(el.studentAccountPanel);
+    clearFormNote(el.nameNote);
+    clearFormNote(el.passwordNote);
+  }
+
+  async function handleNameUpdate(event) {
+    event.preventDefault();
+    clearFormNote(el.nameNote);
+
+    const fullName = el.accountName.value.trim().replace(/\s+/g, " ");
+    if (fullName.length < 2) {
+      setFormNote(el.nameNote, "Enter your full name.", "error");
+      el.accountName.focus();
+      return;
+    }
+    if (fullName.length > 80) {
+      setFormNote(el.nameNote, "Your name must be 80 characters or fewer.", "error");
+      el.accountName.focus();
+      return;
+    }
+    if (fullName === state.profile.full_name) {
+      setFormNote(el.nameNote, "That is already your display name.", "success");
+      return;
+    }
+
+    setButtonBusy(el.updateNameBtn, true, "Saving…");
+    try {
+      const { data, error } = await state.client
+        .from("profiles")
+        .update({ full_name: fullName })
+        .eq("id", state.user.id)
+        .select("id, full_name")
+        .single();
+
+      if (error) throw error;
+
+      state.profile = { ...state.profile, full_name: data.full_name };
+      el.accountName.value = data.full_name;
+      el.studentFirst.textContent = firstName(data.full_name);
+      renderHeader();
+      setFormNote(el.nameNote, "Name updated. Your teacher will see the new name.", "success");
+      toast("Your name was updated.");
+    } catch (err) {
+      console.error("[assignment-hub] name update failed:", err);
+      setFormNote(el.nameNote, friendlyError(err && err.message), "error");
+    } finally {
+      setButtonBusy(el.updateNameBtn, false);
+    }
+  }
+
+  async function handlePasswordUpdate(event) {
+    event.preventDefault();
+    clearFormNote(el.passwordNote);
+
+    const currentPassword = el.accountCurrentPassword.value;
+    const newPassword = el.accountNewPassword.value;
+    const confirmPassword = el.accountConfirmPassword.value;
+
+    if (!currentPassword) {
+      setFormNote(el.passwordNote, "Enter your current password.", "error");
+      el.accountCurrentPassword.focus();
+      return;
+    }
+    if (newPassword.length < 6) {
+      setFormNote(el.passwordNote, "Your new password must be at least 6 characters.", "error");
+      el.accountNewPassword.focus();
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setFormNote(el.passwordNote, "The new passwords do not match.", "error");
+      el.accountConfirmPassword.focus();
+      return;
+    }
+    if (newPassword === currentPassword) {
+      setFormNote(el.passwordNote, "Choose a password different from your current one.", "error");
+      el.accountNewPassword.focus();
+      return;
+    }
+
+    const email = state.user.email || studentEmail(state.profile.roll_number);
+    if (!email) {
+      setFormNote(el.passwordNote, "Your account email could not be found. Ask your teacher for help.", "error");
+      return;
+    }
+
+    setButtonBusy(el.updatePasswordBtn, true, "Updating…");
+    try {
+      const { error: authError } = await state.client.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      });
+
+      if (authError) {
+        const incorrect = /invalid login/i.test(authError.message || "");
+        setFormNote(
+          el.passwordNote,
+          incorrect ? "Current password is incorrect." : friendlyError(authError.message, "student"),
+          "error"
+        );
+        el.accountCurrentPassword.focus();
+        return;
+      }
+
+      const { error: updateError } = await state.client.auth.updateUser({ password: newPassword });
+      if (updateError) throw updateError;
+
+      el.accountCurrentPassword.value = "";
+      el.accountNewPassword.value = "";
+      el.accountConfirmPassword.value = "";
+      el.studentLoginPassword.value = "";
+      resetPasswordVisibility(el.passwordForm);
+      setFormNote(el.passwordNote, "Password updated. Use your new password next time you log in.", "success");
+      toast("Your password was updated.");
+    } catch (err) {
+      console.error("[assignment-hub] password update failed:", err);
+      const raw = String(err && err.message ? err.message : "");
+      setFormNote(
+        el.passwordNote,
+        /different from the old password/i.test(raw)
+          ? "Choose a password different from your current one."
+          : friendlyError(raw, "student"),
+        "error"
+      );
+    } finally {
+      setButtonBusy(el.updatePasswordBtn, false);
+    }
   }
 
   function showTeacherPanel() {
@@ -1990,6 +2172,13 @@
     el.studentSignupForm.addEventListener("submit", handleStudentSignup);
     el.teacherLoginForm.addEventListener("submit", handleTeacherLogin);
     el.teacherSignupForm.addEventListener("submit", handleTeacherSignup);
+    document.addEventListener("click", handlePasswordToggle);
+    el.nameForm.addEventListener("submit", handleNameUpdate);
+    el.accountName.addEventListener("input", () => clearFormNote(el.nameNote));
+    el.passwordForm.addEventListener("submit", handlePasswordUpdate);
+    [el.accountCurrentPassword, el.accountNewPassword, el.accountConfirmPassword].forEach((input) => {
+      input.addEventListener("input", () => clearFormNote(el.passwordNote));
+    });
     el.logoutBtn.addEventListener("click", logout);
     el.uploadForm.addEventListener("submit", handleUpload);
 

@@ -231,6 +231,47 @@ button, input { font: inherit; color: inherit; }
   box-shadow: 0 0 0 4px var(--primary-ring);
 }
 
+/* Custom reveal control: the browser's native one is not available on every phone. */
+.password-field { position: relative; display: flex; width: 100%; }
+
+.password-field input { padding-right: 84px; }
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  z-index: 2;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 38px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 9px;
+  background: #fbfcfe;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.password-toggle:hover { background: #eef1f8; color: var(--ink-soft); }
+
+.password-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+.password-toggle svg { width: 16px; height: 16px; flex: none; }
+
+.password-field:focus-within .password-toggle { background: #fff; }
+
+.password-toggle-text { line-height: 1; }
+
+input::-ms-reveal,
+input::-ms-clear { display: none; }
+
 .field select,
 .field textarea {
   width: 100%;
@@ -836,6 +877,48 @@ button, input { font: inherit; color: inherit; }
 
 .feature-panel .empty { padding: 30px 18px; }
 
+/* ---------- Student account ---------- */
+
+.account-panel {
+  position: relative;
+  overflow: hidden;
+  padding: 20px 20px 20px 24px;
+}
+
+.account-panel::before {
+  content: "";
+  position: absolute;
+  top: 20px;
+  bottom: 20px;
+  left: 0;
+  width: 4px;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(180deg, #6366f1, #8b5cf6);
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.account-form { display: flex; flex-direction: column; min-width: 0; }
+
+.account-form h3 { font-size: 0.95rem; letter-spacing: -0.015em; }
+
+.account-form > .muted { margin: 4px 0 14px; }
+
+.account-form .field { margin-bottom: 14px; }
+
+.account-form .btn { margin-top: 2px; }
+
+.account-form + .account-form {
+  padding-left: 24px;
+  border-left: 1px solid var(--line);
+}
+
+.account-form .form-note { margin-top: 10px; }
+
 .pill-new {
   height: 24px;
   padding: 0 9px;
@@ -1102,6 +1185,14 @@ button, input { font: inherit; color: inherit; }
   .roster-item { padding: 11px; }
   .roster-item .icon-btn.subtle { width: 40px; height: 40px; }
   .feature-panel { padding: 16px; }
+  .account-panel { padding: 18px 18px 18px 22px; }
+  .account-grid { grid-template-columns: 1fr; gap: 22px; }
+  .account-form + .account-form {
+    padding-top: 22px;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
   .message-badge { width: 38px; height: 38px; }
   .material-item .file-badge { display: none; }
   .auth-brand h1 { font-size: 1.45rem; }

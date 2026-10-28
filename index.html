@@ -138,7 +138,16 @@
           </div>
           <div class="field">
             <label for="studentLoginPassword">Password</label>
-            <input id="studentLoginPassword" type="password" autocomplete="current-password" placeholder="Your password" required />
+            <div class="password-field">
+              <input id="studentLoginPassword" type="password" autocomplete="current-password" placeholder="Your password" required />
+              <button class="password-toggle" type="button" data-password-toggle="studentLoginPassword" aria-controls="studentLoginPassword" aria-label="Show password" aria-pressed="false" title="Show password">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+                <span class="password-toggle-text">Show</span>
+              </button>
+            </div>
           </div>
           <button class="btn btn-primary btn-block" type="submit" id="studentLoginBtn">Log in as student</button>
           <p class="auth-foot">No email needed — use the roll number you signed up with.</p>
@@ -156,7 +165,16 @@
           </div>
           <div class="field">
             <label for="studentSignupPassword">Password</label>
-            <input id="studentSignupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
+            <div class="password-field">
+              <input id="studentSignupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
+              <button class="password-toggle" type="button" data-password-toggle="studentSignupPassword" aria-controls="studentSignupPassword" aria-label="Show password" aria-pressed="false" title="Show password">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+                <span class="password-toggle-text">Show</span>
+              </button>
+            </div>
           </div>
           <button class="btn btn-primary btn-block" type="submit" id="studentSignupBtn">Create student account</button>
           <p class="auth-foot">Use your real name and roll number — your teacher sees them.</p>
@@ -170,7 +188,16 @@
           </div>
           <div class="field">
             <label for="teacherLoginPassword">Password</label>
-            <input id="teacherLoginPassword" type="password" autocomplete="current-password" placeholder="Your password" required />
+            <div class="password-field">
+              <input id="teacherLoginPassword" type="password" autocomplete="current-password" placeholder="Your password" required />
+              <button class="password-toggle" type="button" data-password-toggle="teacherLoginPassword" aria-controls="teacherLoginPassword" aria-label="Show password" aria-pressed="false" title="Show password">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+                <span class="password-toggle-text">Show</span>
+              </button>
+            </div>
           </div>
           <button class="btn btn-primary btn-block" type="submit" id="teacherLoginBtn">Log in as teacher</button>
           <p class="auth-foot">Teacher access must be activated by the class admin.</p>
@@ -188,7 +215,16 @@
           </div>
           <div class="field">
             <label for="teacherSignupPassword">Password</label>
-            <input id="teacherSignupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
+            <div class="password-field">
+              <input id="teacherSignupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
+              <button class="password-toggle" type="button" data-password-toggle="teacherSignupPassword" aria-controls="teacherSignupPassword" aria-label="Show password" aria-pressed="false" title="Show password">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+                <span class="password-toggle-text">Show</span>
+              </button>
+            </div>
           </div>
           <button class="btn btn-primary btn-block" type="submit" id="teacherSignupBtn">Request teacher account</button>
           <p class="auth-foot">The class admin reviews teacher requests before access is enabled.</p>
@@ -287,6 +323,74 @@
             </div>
             <h3>No class materials yet</h3>
             <p>Files shared by your teacher will appear here.</p>
+          </div>
+        </section>
+
+        <section class="card panel feature-panel account-panel" id="studentAccountPanel">
+          <div class="card-head">
+            <div>
+              <h2>My account</h2>
+              <p class="muted small">Change the name your teacher sees or set a new password.</p>
+            </div>
+          </div>
+
+          <div class="account-grid">
+            <form id="nameForm" class="account-form" novalidate>
+              <h3>Display name</h3>
+              <p class="muted small">This name appears on your submissions and in your teacher’s roster.</p>
+              <div class="field">
+                <label for="accountName">Full name</label>
+                <input id="accountName" type="text" autocomplete="name" placeholder="e.g. Ayesha Khan" maxlength="80" required />
+              </div>
+              <button class="btn btn-primary btn-block" type="submit" id="updateNameBtn"><span>Save name</span></button>
+              <p class="form-note" id="nameNote" hidden></p>
+            </form>
+
+            <form id="passwordForm" class="account-form" novalidate>
+              <h3>Change password</h3>
+              <p class="muted small">Confirm your current password, then choose a new one.</p>
+              <div class="field">
+                <label for="accountCurrentPassword">Current password</label>
+                <div class="password-field">
+                  <input id="accountCurrentPassword" type="password" autocomplete="current-password" placeholder="Your current password" required />
+                  <button class="password-toggle" type="button" data-password-toggle="accountCurrentPassword" aria-controls="accountCurrentPassword" aria-label="Show password" aria-pressed="false" title="Show password">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                    </svg>
+                    <span class="password-toggle-text">Show</span>
+                  </button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="accountNewPassword">New password</label>
+                <div class="password-field">
+                  <input id="accountNewPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required />
+                  <button class="password-toggle" type="button" data-password-toggle="accountNewPassword" aria-controls="accountNewPassword" aria-label="Show password" aria-pressed="false" title="Show password">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                    </svg>
+                    <span class="password-toggle-text">Show</span>
+                  </button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="accountConfirmPassword">Confirm new password</label>
+                <div class="password-field">
+                  <input id="accountConfirmPassword" type="password" autocomplete="new-password" placeholder="Repeat new password" minlength="6" required />
+                  <button class="password-toggle" type="button" data-password-toggle="accountConfirmPassword" aria-controls="accountConfirmPassword" aria-label="Show password" aria-pressed="false" title="Show password">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                    </svg>
+                    <span class="password-toggle-text">Show</span>
+                  </button>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-block" type="submit" id="updatePasswordBtn"><span>Update password</span></button>
+              <p class="form-note" id="passwordNote" hidden></p>
+            </form>
           </div>
         </section>
 
