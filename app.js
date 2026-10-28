@@ -110,8 +110,6 @@
     refreshStudentMaterials: $("refreshStudentMaterials"),
     studentMaterialList: $("studentMaterialList"),
     studentMaterialEmpty: $("studentMaterialEmpty"),
-    accountFullName: $("accountFullName"),
-    accountRollNumber: $("accountRollNumber"),
 
     teacherView: $("teacherView"),
     statTotal: $("statTotal"),
@@ -822,13 +820,6 @@
       ? `Roll ${state.profile.roll_number}`
       : "Roll —";
     resetUploadForm();
-    renderAccountSummary();
-  }
-
-  function renderAccountSummary() {
-    if (!state.profile) return;
-    el.accountFullName.textContent = state.profile.full_name || "—";
-    el.accountRollNumber.textContent = state.profile.roll_number || "—";
   }
 
   function showTeacherPanel() {

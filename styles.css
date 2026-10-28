@@ -877,56 +877,6 @@ input::-ms-clear { display: none; }
 
 .feature-panel .empty { padding: 30px 18px; }
 
-/* ---------- Student account ---------- */
-
-.account-panel {
-  position: relative;
-  overflow: hidden;
-  padding: 20px 20px 20px 24px;
-}
-
-.account-panel::before {
-  content: "";
-  position: absolute;
-  top: 20px;
-  bottom: 20px;
-  left: 0;
-  width: 4px;
-  border-radius: 0 999px 999px 0;
-  background: linear-gradient(180deg, #6366f1, #8b5cf6);
-}
-
-.account-facts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0;
-}
-
-.account-facts > div {
-  min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: #f8f9fd;
-}
-
-.account-facts dt {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 650;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.account-facts dd {
-  margin: 4px 0 0;
-  color: var(--ink);
-  font-weight: 650;
-  overflow-wrap: anywhere;
-}
-
 .pill-new {
   height: 24px;
   padding: 0 9px;
@@ -1193,8 +1143,6 @@ input::-ms-clear { display: none; }
   .roster-item { padding: 11px; }
   .roster-item .icon-btn.subtle { width: 40px; height: 40px; }
   .feature-panel { padding: 16px; }
-  .account-panel { padding: 18px 18px 18px 22px; }
-  .account-facts { grid-template-columns: 1fr; }
   .message-badge { width: 38px; height: 38px; }
   .material-item .file-badge { display: none; }
   .auth-brand h1 { font-size: 1.45rem; }

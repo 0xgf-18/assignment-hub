@@ -12,7 +12,6 @@ No app install, no build step. Open the link in any phone or computer browser.
 | --- | --- |
 | Sign up with full name + roll number + password — **no email needed** | Request a teacher account with email + password |
 | Log in with roll number + password | Log in with email + password after the admin activates it |
-| See their account details in **My account** | See every registered student — even before they upload — plus every submission |
 | Upload a file with an assignment title | Search by name, roll number, or title |
 | See their own past submissions, view or delete them | Message one student or the whole class, with read counts |
 | Receive private messages and class announcements, with an unread badge | Upload PDFs, notes or slides for the whole class; delete materials |
@@ -171,12 +170,11 @@ order by role, full_name;
 1. A student signs up → the app turns their roll number into a private internal email (never shown) and creates a row in `profiles` with their name and roll number (role `student`).
 2. They log in with **roll number + password**, enter an assignment title, choose a file, and tap **Upload assignment** → the file goes to the private `assignments` bucket under their user id, and a row is added to `submissions`.
 3. A student can **view** or **delete** only their own uploads. Deleting removes the database row and the stored file.
-4. The **My account** panel shows the student's name and roll number. Students cannot edit their profile or change their password from the website; those details are managed by the teacher/admin.
-5. The teacher requests an account, the admin promotes it, then the teacher logs in with **email + password** → sees the full class roster (including students with no uploads) and every submission, newest first, with student name + roll number → searches, views or downloads any file.
-6. The teacher can send a **private message** to one student or an **announcement to every current student**. Announcements create one message row per recipient, so each student has their own read state; the teacher sees a grouped sent list with read counts. Students get an unread badge and an in-app toast on login, when they return to the tab, and within 45 seconds while the page is open.
-7. The teacher can upload a PDF, document, slide deck or image to **Class materials**. Every student can view or download it; only the teacher can upload or delete materials.
-8. The teacher can permanently remove a student with the trash button. The app deletes the student's stored files, then calls a teacher-only database function that deletes the auth account; the profile, submissions and messages cascade automatically.
-9. All file links are **signed URLs** that expire quickly, so files can’t be shared publicly.
+4. The teacher requests an account, the admin promotes it, then the teacher logs in with **email + password** → sees the full class roster (including students with no uploads) and every submission, newest first, with student name + roll number → searches, views or downloads any file.
+5. The teacher can send a **private message** to one student or an **announcement to every current student**. Announcements create one message row per recipient, so each student has their own read state; the teacher sees a grouped sent list with read counts. Students get an unread badge and an in-app toast on login, when they return to the tab, and within 45 seconds while the page is open.
+6. The teacher can upload a PDF, document, slide deck or image to **Class materials**. Every student can view or download it; only the teacher can upload or delete materials.
+7. The teacher can permanently remove a student with the trash button. The app deletes the student's stored files, then calls a teacher-only database function that deletes the auth account; the profile, submissions and messages cascade automatically.
+8. All file links are **signed URLs** that expire quickly, so files can’t be shared publicly.
 
 Permissions are enforced by Supabase **Row Level Security** (RLS) from `schema.sql`, not by the website code. Even someone who reads the JavaScript cannot list other students’ files.
 
